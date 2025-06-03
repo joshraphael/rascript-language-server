@@ -1,2 +1,5 @@
-﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
+﻿using RATools;
+
+Jamiras.Services.CoreServices.RegisterServices();
+
+var cli = new RAScriptCLI();
