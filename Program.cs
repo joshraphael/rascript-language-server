@@ -1,10 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OmniSharp.Extensions.LanguageServer.Server;
-using System;
-using System.Threading.Tasks;
 
-namespace Server
+namespace RAScriptLanguageServer
 {
     class Program
     {
@@ -21,10 +19,9 @@ namespace Server
                     {
                         services
                         .AddSingleton<BufferManager>()
-                        .AddSingleton<TextDocumentSyncHandler>()
-                        .AddSingleton<HoverProvider>();
+                        .AddSingleton<TextDocumentSyncHandler>();
                     })
-                    // .WithHandler<HoverProvider>()
+                    .WithHandler<HoverProvider>()
                     // .WithHandler<CompletionHandler>()
                 );
 

@@ -1,5 +1,3 @@
-using System.Threading;
-using System.Threading.Tasks;
 using System.Text;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol;
@@ -9,16 +7,15 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using MediatR;
-using System.Linq;
 
 
-namespace Server
+namespace RAScriptLanguageServer
 {
     internal class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
     {
         private readonly TextDocumentSelector _textDocumentSelector = new TextDocumentSelector(
             new TextDocumentFilter {
-                Pattern = "**/*.csproj"
+                Pattern = "**/*.rascript"
             }
         );
         private readonly ILanguageServerFacade _router;
@@ -32,7 +29,7 @@ namespace Server
 
         public override TextDocumentAttributes GetTextDocumentAttributes(DocumentUri uri)
         {
-            return new TextDocumentAttributes(uri, "csproj");
+            return new TextDocumentAttributes(uri, "rascript");
         }
 
         public override Task<Unit> Handle(DidOpenTextDocumentParams request, CancellationToken cancellationToken)
@@ -48,11 +45,8 @@ namespace Server
         {
             var documentPath = request.TextDocument.Uri.ToString();
             var text = request.ContentChanges.FirstOrDefault()?.Text;
-
             _bufferManager.UpdateBuffer(documentPath, new StringBuilder(text));
-
             _router.Window.LogInfo($"Updated buffer for document: {documentPath}\n{text}");
-
             return Unit.Task;
         }
 

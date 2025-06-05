@@ -1,21 +1,17 @@
-
-using System.Threading.Tasks;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
-using System.Threading;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
-using System.Collections.Generic;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 
-namespace Server
+namespace RAScriptLanguageServer
 {
     class HoverProvider : HoverHandlerBase
     {
 
         private readonly TextDocumentSelector _textDocumentSelector = new TextDocumentSelector(
             new TextDocumentFilter {
-                Pattern = "**/*.csproj"
+                Pattern = "**/*.rascript"
             }
         );
 

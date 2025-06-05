@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text;
 
-namespace Server
+namespace RAScriptLanguageServer
 {
     internal class BufferManager
     {
