@@ -1,5 +1,34 @@
-﻿using RATools;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OmniSharp.Extensions.LanguageServer.Server;
+using System;
+using System.Threading.Tasks;
 
-Jamiras.Services.CoreServices.RegisterServices();
+namespace Server
+{
+    class Program
+    {
+        static async Task Main(string[] args)
+        {
+            var server = await LanguageServer.From(options =>
+                options
+                    .WithInput(Console.OpenStandardInput())
+                    .WithOutput(Console.OpenStandardOutput())
+                    .WithLoggerFactory(new LoggerFactory())
+                    .AddDefaultLoggingProvider()
+                    .WithServices(x => x.AddLogging(b => b.SetMinimumLevel(LogLevel.Trace)))
+                    .WithServices(services =>
+                    {
+                        services
+                        .AddSingleton<BufferManager>()
+                        .AddSingleton<TextDocumentSyncHandler>()
+                        .AddSingleton<HoverProvider>();
+                    })
+                    // .WithHandler<HoverProvider>()
+                    // .WithHandler<CompletionHandler>()
+                );
 
-var cli = new RAScriptCLI();
+            await server.WaitForExit;
+        }
+    }
+}

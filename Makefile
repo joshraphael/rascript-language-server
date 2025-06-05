@@ -3,7 +3,7 @@ RATOOLS_VERSION := v1.15.1
 reset:
 	rm -rf RATools/ && git submodule update --init --recursive && cd RATools/ && git checkout tags/${RATOOLS_VERSION}
 
-run: reset
+modify:
 	rm -rf RATools/Tests
 	rm -rf RATools/Core/UI
 	rm -rf RATools/Core/Tests
@@ -18,4 +18,9 @@ run: reset
 	rm -rf RATools/Source/AssemblyInfo.cs
 	rm -rf RATools/Source/rascript-cli/Program.cs
 	sed -i '1iusing Timer = System.Timers.Timer;' RATools/Core/Core/Source/Services/Impl/TimerService.cs
+
+run: reset modify
 	dotnet run
+
+build: reset modify
+	dotnet build
