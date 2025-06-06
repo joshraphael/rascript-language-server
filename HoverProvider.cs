@@ -44,7 +44,6 @@ namespace RAScriptLanguageServer
                 word.Append(initialChar);
                 var hasLeft = index > 0;
                 var hasRight = index < line.Length - 1;
-                var len = line.Length;
                 if (hasLeft)
                 {
                     for (int i = index - 1; i >= 0; i--)
@@ -83,7 +82,7 @@ namespace RAScriptLanguageServer
             var documentPath = request.TextDocument.Uri.ToString();
             var line = request.Position.Line;
             var character = request.Position.Character;
-            _router.Window.LogInfo($"Opssssssssned buffer for document:");
+            // _router.Window.LogInfo($"Opssssssssned buffer for document:");
             var result = new Hover();
             var word = GetWordAtPosition(documentPath, line, character);
             if (word.Length != 0) {

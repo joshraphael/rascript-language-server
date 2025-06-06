@@ -1,6 +1,8 @@
 RATOOLS_VERSION := v1.15.1
 
 reset:
+	rm -rf bin/
+	rm -rf obj/
 	rm -rf RATools/ && git submodule update --init --recursive && cd RATools/ && git checkout tags/${RATOOLS_VERSION}
 
 modify:
@@ -22,5 +24,10 @@ modify:
 run: reset modify
 	dotnet run
 
-build: reset modify
-	dotnet build
+build: reset modify build-linux build-win
+
+build-linux:
+	dotnet publish -r linux-x64 -p:PublishSingleFile=true --self-contained true
+
+build-win:
+	dotnet publish -r win-x64 -p:PublishSingleFile=true --self-contained true
