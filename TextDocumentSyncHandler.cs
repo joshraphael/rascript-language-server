@@ -36,8 +36,8 @@ namespace RAScriptLanguageServer
         {
             var documentPath = request.TextDocument.Uri.ToString();
             var text = request.TextDocument.Text;
-            _bufferManager.UpdateBuffer(request.TextDocument.Uri.ToString(), new StringBuilder(request.TextDocument.Text));
-            // _router.Window.LogInfo($"Opened buffer for document: {documentPath}\n{text}");
+            Parser p = new Parser(_router, text);
+            _bufferManager.UpdateBuffer(documentPath, new StringBuilder(request.TextDocument.Text), p);
             return Unit.Task;
         }
 
@@ -48,9 +48,7 @@ namespace RAScriptLanguageServer
             if (text != null)
             {
                 Parser p = new Parser(_router, text);
-                p.Load();
-                _bufferManager.UpdateBuffer(documentPath, new StringBuilder(text));
-                // _router.Window.LogInfo($"Updated buffer for document: {documentPath}\n{text}");
+                _bufferManager.UpdateBuffer(documentPath, new StringBuilder(text), p);
             }
             return Unit.Task;
         }

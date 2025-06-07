@@ -22,7 +22,7 @@ namespace RAScriptLanguageServer
                         .AddSingleton<TextDocumentSyncHandler>();
                     })
                     .WithHandler<HoverProvider>()
-                    // .WithHandler<CompletionHandler>()
+                    .WithHandler<DefinitionProvider>()
                 );
 
             await server.WaitForExit;
