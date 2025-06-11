@@ -77,7 +77,7 @@ namespace RAScriptLanguageServer
                                         newLine = string.Join("", trimmedLine).TrimStart();
                                         if (blockCommentStarStyle)
                                         {
-                                            bool starComment = Regex.IsMatch(line, @"^\*.*");
+                                            bool starComment = Regex.IsMatch(newLine, @"^\*.*");
                                             if (!starComment)
                                             {
                                                 blockCommentStarStyle = false;
@@ -146,10 +146,86 @@ namespace RAScriptLanguageServer
                         }
                     }
                     // do something
-                    string[] args = ItemMatch.Groups.Values.ElementAt(3).ToString().Split(",");
-                    _router.Window.LogInfo($"{ItemMatch.Groups.Values.ElementAt(3)}");
+                    string[] args = ItemMatch.Groups.Values.ElementAt(3).ToString().Split(",").Select(s => s.Trim()).ToArray();
+                    if (blockCommentStarStyle)
+                    {
+                        _router.Window.LogInfo($"{funcName} - Star block");
+                        this.comments.Add(funcName, NewHoverData(funcName, comment, null, args));
+                    }
+                    else
+                    {
+                        _router.Window.LogInfo($"{funcName} - Not star block");
+                        this.comments.Add(funcName, NewHoverData(funcName, untrimmedComment, null, args));
+                    }
                 }
             }
+        }
+
+        private string[] NewHoverData(string key, string text, string? docUrl, string[] args)
+        {
+            string argStr = string.Join(", ", args);
+            string[] commentLines = Regex.Split(text, @"\r?\n");
+            List<string> lines = new List<string>();
+            lines.Add($"```rascript\nfunction {key}({argStr})\n```");
+            if (text != null && text != "")
+            {
+                lines.Append("---");
+                string curr = "";
+                bool codeBlock = false;
+                for (int i = 0; i < commentLines.Length; i++)
+                {
+                    string line = Regex.Replace(commentLines[i], @"^\/\/", "").TrimStart();
+                    if (line.StartsWith("```"))
+                    {
+                        codeBlock = !codeBlock;
+                        if (codeBlock)
+                        {
+                            curr = line;
+                        }
+                        else
+                        {
+                            curr = curr + "\n" + line;
+                            lines.Add(curr);
+                            curr = "";
+                        }
+                        continue;
+                    }
+                    if (line.StartsWith('|') || line.StartsWith('*'))
+                    {
+                        line = line + "\n";
+                    }
+                    if (codeBlock)
+                    {
+                        curr = curr + "\n" + line;
+                    }
+                    else
+                    {
+                        if (line == "")
+                        {
+                            lines.Add(curr);
+                            curr = "";
+                        }
+                        else
+                        {
+                            curr = curr + " " + line;
+                        }
+                    }
+                }
+                if (curr != "")
+                {
+                    lines.Add(curr);
+                }
+                if (codeBlock)
+                {
+                    lines.Add("```");
+                }
+            }
+            if (docUrl != null && docUrl != "")
+            {
+                lines.Add("---");
+                lines.Add($"[Wiki link for `{key}()`](${docUrl})");
+            }
+            return lines.ToArray();
         }
 
         public string GetWordAtPosition(string txt, long lineNum, long character)
@@ -207,6 +283,15 @@ namespace RAScriptLanguageServer
             if (this.functionLocations.ContainsKey(word))
             {
                 return this.functionLocations[word];
+            }
+            return null;
+        }
+
+        public string[]? GetHoverText(string word)
+        {
+            if (this.comments.ContainsKey(word))
+            {
+                return this.comments[word];
             }
             return null;
         }

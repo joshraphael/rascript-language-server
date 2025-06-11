@@ -32,15 +32,20 @@ namespace RAScriptLanguageServer
                 var word = buffer?.GetParser().GetWordAtPosition(txt, line, character);
                 if (word != null && word.Length != 0)
                 {
-                    var content = new List<MarkedString>
+                    var hoverText = buffer?.GetParser().GetHoverText(word);
+                    if (hoverText != null && hoverText.Length > 0)
                     {
-                        new(word)
-                    };
-                    Hover result = new()
-                    {
-                        Contents = new MarkedStringsOrMarkupContent(content.ToArray())
-                    };
-                    return Task.FromResult<Hover?>(result);
+                        var content = new List<MarkedString>();
+                        foreach (var l in hoverText)
+                        {
+                            content.Add(new MarkedString(l));
+                        }
+                        Hover result = new()
+                        {
+                            Contents = new MarkedStringsOrMarkupContent(content.ToArray())
+                        };
+                        return Task.FromResult<Hover?>(result);
+                    }
                 }
             }
             return Task.FromResult<Hover?>(null);
