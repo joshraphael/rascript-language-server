@@ -15,11 +15,6 @@ namespace RAScriptLanguageServer
             this.parser = parser;
         }
 
-        public Position? GetLinkLocation(string word)
-        {
-            return parser.GetLinkLocation(word);
-        }
-
         public string GetDocumentText()
         {
             return document.ToString();

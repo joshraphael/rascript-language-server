@@ -19,13 +19,14 @@ namespace RAScriptLanguageServer
         {
             _router = router;
             this.text = text;
-            this.textPositions = new TextPositions(text);
+            this.textPositions = new TextPositions(_router, text);
             this.functionLocations = new Dictionary<string, Position>();
             this.Load();
         }
 
         private void Load()
         {
+            var lines = this.textPositions.GetLines();
             if (text != null && text != "")
             {
                 foreach (Match ItemMatch in Regex.Matches(text, @"(\bfunction\b)\s*(\w+)\s*\(([^\(\)]*)\)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
@@ -33,6 +34,33 @@ namespace RAScriptLanguageServer
                     string funcName = ItemMatch.Groups.Values.ElementAt(2).ToString();
                     Position pos = this.textPositions.GetPosition(ItemMatch.Index);
                     functionLocations.Add(funcName, pos);
+                    string comment = "";
+                    string untrimmedComment = "";
+                    bool blockCommentStarStyle = true;
+                    if (pos.Line > 0)
+                    {
+                        int offset = 1;
+                        bool inBlock = false;
+                        while (pos.Line - offset >= 0)
+                        {
+                            int lineNum = pos.Line - offset;
+                            string? line = this.textPositions.GetLineAt(lineNum);
+                            if (line != null)
+                            {
+                                line = line.TrimStart();
+                                if (offset == 1)
+                                {
+                                    bool isBlock = false;
+                                }
+                                _router.Window.LogInfo($"{line}");
+                            }
+                            else
+                            {
+                                _router.Window.LogInfo($"its null {lineNum}");
+                            }
+                            offset = offset + 1;
+                        }
+                    }
                 }
             }
         }
