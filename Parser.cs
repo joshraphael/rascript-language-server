@@ -4,7 +4,6 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using System.Text;
 
 namespace RAScriptLanguageServer
@@ -15,6 +14,7 @@ namespace RAScriptLanguageServer
         private readonly string text;
         private readonly TextPositions textPositions;
         private readonly Dictionary<string, Position> functionLocations;
+        private readonly Dictionary<string, string[]> comments;
 
         public Parser(ILanguageServerFacade router, string text)
         {
@@ -22,6 +22,7 @@ namespace RAScriptLanguageServer
             this.text = text;
             this.textPositions = new TextPositions(_router, text);
             this.functionLocations = new Dictionary<string, Position>();
+            this.comments = new Dictionary<string, string[]>();
             this.Load();
         }
 
@@ -62,8 +63,66 @@ namespace RAScriptLanguageServer
                                     bool endBlock = Regex.IsMatch(line, @"^.*\/\*.*$");
                                     if (endBlock)
                                     {
-                                        _router.Window.LogInfo($"break");
+                                        // Trim start token
+                                        string[] trimmedLine = Regex.Split(line, @"\/\*(.*)", RegexOptions.Singleline).Skip(1).ToArray();
+                                        string newLine = string.Join("", trimmedLine).TrimStart();
+                                        _router.Window.LogInfo($"{newLine}");
+
+                                        // Trim end token
+                                        trimmedLine = newLine.Split("*/"); // use whats after the star token
+                                        if (trimmedLine.Length > 2)
+                                        {
+                                            trimmedLine = trimmedLine[..^1]; // remove last element
+                                        }
+                                        newLine = string.Join("", trimmedLine).TrimStart();
+                                        if (blockCommentStarStyle)
+                                        {
+                                            bool starComment = Regex.IsMatch(line, @"^\*.*");
+                                            if (!starComment)
+                                            {
+                                                blockCommentStarStyle = false;
+                                            }
+                                        }
+                                        untrimmedComment = "//" + newLine + "\n" + untrimmedComment; // keep an untrimmed version of the comment in case the entire block is prefixed with stars
+
+                                        // Trim first '*' token (in case they comment that way)
+                                        trimmedLine = Regex.Split(newLine, @"^\*(.*)", RegexOptions.Singleline).ToArray();
+                                        if (trimmedLine.Length > 2)
+                                        {
+                                            trimmedLine = trimmedLine[1..]; // remove first element
+                                        }
+                                        newLine = string.Join("", trimmedLine).TrimStart();
+                                        comment = "//" + newLine + "\n" + comment;
                                         break;
+                                    }
+                                    else // at end of comment block
+                                    {
+                                        // Trim end token (guaranteed to not have text after end token if the user wants comments to appear in hover box)
+                                        string[] trimmedLine = line.Split("*/");
+                                        if (trimmedLine.Length > 2)
+                                        {
+                                            trimmedLine = trimmedLine[..^1]; // remove last element
+                                        }
+                                        string newLine = string.Join("", trimmedLine).TrimStart();
+
+                                        if (blockCommentStarStyle)
+                                        {
+                                            bool starComment = Regex.IsMatch(newLine, @"^\*.*");
+                                            if (!starComment)
+                                            {
+                                                blockCommentStarStyle = false;
+                                            }
+                                        }
+                                        untrimmedComment = "//" + newLine + "\n" + untrimmedComment; // keep an untrimmed version of the comment in case the entire block is prefixed with stars
+
+                                        // Trim first '*' token (in case they comment that way)
+                                        trimmedLine = Regex.Split(newLine, @"^\*(.*)", RegexOptions.Singleline).ToArray();
+                                        if (trimmedLine.Length > 2)
+                                        {
+                                            trimmedLine = trimmedLine[1..]; // remove first element
+                                        }
+                                        newLine = string.Join("", trimmedLine).TrimStart();
+                                        comment = "//" + newLine + "\n" + comment;
                                     }
                                 }
                                 else // Single line comment
@@ -71,7 +130,7 @@ namespace RAScriptLanguageServer
                                     bool isComment = Regex.IsMatch(line, @"^\/\/.*$");
                                     if (isComment)
                                     {
-
+                                        comment = line + "\n" + comment;
                                     }
                                     else
                                     {
@@ -86,6 +145,9 @@ namespace RAScriptLanguageServer
                             offset = offset + 1;
                         }
                     }
+                    // do something
+                    string[] args = ItemMatch.Groups.Values.ElementAt(3).ToString().Split(",");
+                    _router.Window.LogInfo($"{ItemMatch.Groups.Values.ElementAt(3)}");
                 }
             }
         }
