@@ -4,6 +4,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Text;
 
 namespace RAScriptLanguageServer
@@ -50,9 +51,33 @@ namespace RAScriptLanguageServer
                                 line = line.TrimStart();
                                 if (offset == 1)
                                 {
-                                    bool isBlock = false;
+                                    bool isBlock = Regex.IsMatch(line, @"^.*\*\/$");
+                                    if (isBlock)
+                                    {
+                                        inBlock = true;
+                                    }
                                 }
-                                _router.Window.LogInfo($"{line}");
+                                if (inBlock) // Block comment
+                                {
+                                    bool endBlock = Regex.IsMatch(line, @"^.*\/\*.*$");
+                                    if (endBlock)
+                                    {
+                                        _router.Window.LogInfo($"break");
+                                        break;
+                                    }
+                                }
+                                else // Single line comment
+                                {
+                                    bool isComment = Regex.IsMatch(line, @"^\/\/.*$");
+                                    if (isComment)
+                                    {
+
+                                    }
+                                    else
+                                    {
+                                        break;
+                                    }
+                                }
                             }
                             else
                             {
