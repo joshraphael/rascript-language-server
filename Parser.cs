@@ -15,20 +15,27 @@ namespace RAScriptLanguageServer
         private readonly TextPositions textPositions;
         private readonly Dictionary<string, Position> functionLocations;
         private readonly Dictionary<string, string[]> comments;
+        private readonly FunctionDefinition[] functionDefinitions;
 
-        public Parser(ILanguageServerFacade router, string text)
+        public Parser(ILanguageServerFacade router, FunctionDefinitions functionDefinitions, string text)
         {
             _router = router;
             this.text = text;
             this.textPositions = new TextPositions(_router, text);
             this.functionLocations = new Dictionary<string, Position>();
             this.comments = new Dictionary<string, string[]>();
+            this.functionDefinitions = functionDefinitions.functionDefinitions;
             this.Load();
         }
 
         private void Load()
         {
-            var lines = this.textPositions.GetLines();
+            for (int i = 0; i < this.functionDefinitions.Length; i++)
+            {
+                FunctionDefinition fn = this.functionDefinitions[i];
+                string comment = string.Join("\n", fn.CommentDoc);
+                this.comments.Add(fn.Key, NewHoverData(fn.Key, comment, fn.URL, fn.Args));
+            }
             if (text != null && text != "")
             {
                 foreach (Match ItemMatch in Regex.Matches(text, @"(\bfunction\b)\s*(\w+)\s*\(([^\(\)]*)\)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
@@ -219,7 +226,7 @@ namespace RAScriptLanguageServer
             if (docUrl != null && docUrl != "")
             {
                 lines.Add("---");
-                lines.Add($"[Wiki link for `{key}()`](${docUrl})");
+                lines.Add($"[Wiki link for `{key}()`]({docUrl})");
             }
             return lines.ToArray();
         }

@@ -20,11 +20,13 @@ namespace RAScriptLanguageServer
         );
         private readonly ILanguageServerFacade _router;
         private readonly BufferManager _bufferManager;
+        private readonly FunctionDefinitions _functionDefinitions;
 
         public TextDocumentSyncHandler(ILanguageServerFacade router, BufferManager bufferManager)
         {
             _router = router;
             _bufferManager = bufferManager;
+            _functionDefinitions = new FunctionDefinitions();
         }
 
         public override TextDocumentAttributes GetTextDocumentAttributes(DocumentUri uri)
@@ -36,7 +38,7 @@ namespace RAScriptLanguageServer
         {
             var documentPath = request.TextDocument.Uri.ToString();
             var text = request.TextDocument.Text;
-            Parser p = new Parser(_router, text);
+            Parser p = new Parser(_router, _functionDefinitions, text);
             _bufferManager.UpdateBuffer(documentPath, new StringBuilder(request.TextDocument.Text), p);
             return Unit.Task;
         }
@@ -47,7 +49,7 @@ namespace RAScriptLanguageServer
             var text = request.ContentChanges.FirstOrDefault()?.Text;
             if (text != null)
             {
-                Parser p = new Parser(_router, text);
+                Parser p = new Parser(_router, _functionDefinitions, text);
                 _bufferManager.UpdateBuffer(documentPath, new StringBuilder(text), p);
             }
             return Unit.Task;
