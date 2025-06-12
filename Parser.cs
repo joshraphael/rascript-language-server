@@ -66,7 +66,6 @@ namespace RAScriptLanguageServer
                                         // Trim start token
                                         string[] trimmedLine = Regex.Split(line, @"\/\*(.*)", RegexOptions.Singleline).Skip(1).ToArray();
                                         string newLine = string.Join("", trimmedLine).TrimStart();
-                                        _router.Window.LogInfo($"{newLine}");
 
                                         // Trim end token
                                         trimmedLine = newLine.Split("*/"); // use whats after the star token
@@ -140,7 +139,6 @@ namespace RAScriptLanguageServer
                             }
                             else
                             {
-                                _router.Window.LogInfo($"its null {lineNum}");
                             }
                             offset = offset + 1;
                         }
@@ -149,12 +147,10 @@ namespace RAScriptLanguageServer
                     string[] args = ItemMatch.Groups.Values.ElementAt(3).ToString().Split(",").Select(s => s.Trim()).ToArray();
                     if (blockCommentStarStyle)
                     {
-                        _router.Window.LogInfo($"{funcName} - Star block");
                         this.comments.Add(funcName, NewHoverData(funcName, comment, null, args));
                     }
                     else
                     {
-                        _router.Window.LogInfo($"{funcName} - Not star block");
                         this.comments.Add(funcName, NewHoverData(funcName, untrimmedComment, null, args));
                     }
                 }
@@ -169,7 +165,7 @@ namespace RAScriptLanguageServer
             lines.Add($"```rascript\nfunction {key}({argStr})\n```");
             if (text != null && text != "")
             {
-                lines.Append("---");
+                lines.Add("---");
                 string curr = "";
                 bool codeBlock = false;
                 for (int i = 0; i < commentLines.Length; i++)
