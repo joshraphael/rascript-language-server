@@ -12,20 +12,26 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: checkout
+      - name: Checkout
         uses: actions/checkout@v4
       - name: Setup dotnet 8.0
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - name: Build binaries
+      - name: Build Binaries
         run: make build
+      - name: Zip Packages
+        run: |
+          zip rascript-language-server_${{ github.ref_name }}_linux-x64.zip bin/Release/net8.0/linux-x64/publish/rascript-language-server_${{ github.ref_name }}_linux-x64
+          zip rascript-language-server_${{ github.ref_name }}_win-x64.zip bin/Release/net8.0/win-x64/publish/rascript-language-server_${{ github.ref_name }}_win-x64.exe
+          zip rascript-language-server_${{ github.ref_name }}_osx-x64.zip bin/Release/net8.0/osx-x64/publish/rascript-language-server_${{ github.ref_name }}_osx-x64
+          zip rascript-language-server_${{ github.ref_name }}_osx-arm64.zip bin/Release/net8.0/osx-arm64/publish/rascript-language-server_${{ github.ref_name }}_osx-arm64
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           body: Release tag ${{ github.ref_name }}
           files: |
-            bin/Release/net8.0/linux-x64/publish/rascript-language-server-linux-x64-${{ github.ref_name }}
-            bin/Release/net8.0/win-x64/publish/rascript-language-server-win-x64-${{ github.ref_name }}.exe
-            bin/Release/net8.0/osx-x64/publish/rascript-language-server-osx-x64-${{ github.ref_name }}
-            bin/Release/net8.0/osx-arm64/publish/rascript-language-server-osx-arm64-${{ github.ref_name }}
+            rascript-language-server_${{ github.ref_name }}_linux-x64.zip
+            rascript-language-server_${{ github.ref_name }}_win-x64.zip
+            rascript-language-server_${{ github.ref_name }}_osx-x64.zip
+            rascript-language-server_${{ github.ref_name }}_osx-arm64.zip

@@ -8,7 +8,7 @@ fi
 export PREFIX=""
 
 if [[ ${GITHUB_REF_NAME} != "" ]]; then
-    PREFIX="-$GITHUB_REF_NAME"
+    PREFIX="_$GITHUB_REF_NAME"
 fi
 
-dotnet publish -r $1 -p:PublishSingleFile=true,AssemblyName=rascript-language-server-$1$PREFIX --self-contained true
+dotnet publish -r $1 -p:PublishSingleFile=true,AssemblyName=rascript-language-server${PREFIX}_$1 --self-contained true
