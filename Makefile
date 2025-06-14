@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 RATOOLS_VERSION := v1.15.1
 
 reset:
@@ -28,13 +29,13 @@ run: reset modify
 build: reset modify build-linux-x64 build-win-x64 build-osx-x64 build-osx-arm64
 
 build-linux-x64:
-	dotnet publish -r linux-x64 -p:PublishSingleFile=true,AssemblyName=rascript-language-server-linux-x64 --self-contained true
+	./scripts/build.sh linux-x64
 
 build-win-x64:
-	dotnet publish -r win-x64 -p:PublishSingleFile=true,AssemblyName=rascript-language-server-win-x64 --self-contained true
+	./scripts/build.sh win-x64
 
 build-osx-x64:
-	dotnet publish -r osx-x64 -p:PublishSingleFile=true,AssemblyName=rascript-language-server-osx-x64 --self-contained true
+	./scripts/build.sh osx-x64
 
 build-osx-arm64:
-	dotnet publish -r osx-arm64 -p:PublishSingleFile=true,AssemblyName=rascript-language-server-osx-arm64 --self-contained true
+	./scripts/build.sh osx-arm64

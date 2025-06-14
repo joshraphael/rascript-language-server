@@ -23,8 +23,9 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
+          body: Release tag ${{ github.ref_name }}
           files: |
-            bin/Release/net8.0/linux-x64/publish/rascript-language-server-linux-x64
-            bin/Release/net8.0/win-x64/publish/rascript-language-server-win-x64.exe
-            bin/Release/net8.0/osx-x64/publish/rascript-language-server-osx-x64
-            bin/Release/net8.0/osx-arm64/publish/rascript-language-server-osx-arm64
+            bin/Release/net8.0/linux-x64/publish/rascript-language-server-linux-x64-${{ github.ref_name }}
+            bin/Release/net8.0/win-x64/publish/rascript-language-server-win-x64-${{ github.ref_name }}.exe
+            bin/Release/net8.0/osx-x64/publish/rascript-language-server-osx-x64-${{ github.ref_name }}
+            bin/Release/net8.0/osx-arm64/publish/rascript-language-server-osx-arm64-${{ github.ref_name }}
