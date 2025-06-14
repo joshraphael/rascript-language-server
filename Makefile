@@ -4,6 +4,7 @@ reset:
 	rm -rf bin/
 	rm -rf obj/
 	rm -rf RATools/ && git submodule update --init --recursive && cd RATools/ && git checkout tags/${RATOOLS_VERSION}
+	dotnet restore
 
 modify:
 	rm -rf RATools/Tests
@@ -24,10 +25,16 @@ modify:
 run: reset modify
 	dotnet run
 
-build: reset modify build-linux build-win
+build: reset modify build-linux-x64 build-win-x64 build-osx-x64 build-osx-arm64
 
-build-linux:
-	dotnet publish -r linux-x64 -p:PublishSingleFile=true --self-contained true
+build-linux-x64:
+	dotnet publish -r linux-x64 -p:PublishSingleFile=true,AssemblyName=rascript-language-server-linux-x64 --self-contained true
 
-build-win:
-	dotnet publish -r win-x64 -p:PublishSingleFile=true --self-contained true
+build-win-x64:
+	dotnet publish -r win-x64 -p:PublishSingleFile=true,AssemblyName=rascript-language-server-win-x64 --self-contained true
+
+build-osx-x64:
+	dotnet publish -r osx-x64 -p:PublishSingleFile=true,AssemblyName=rascript-language-server-osx-x64 --self-contained true
+
+build-osx-arm64:
+	dotnet publish -r osx-arm64 -p:PublishSingleFile=true,AssemblyName=rascript-language-server-osx-arm64 --self-contained true

@@ -1,15 +1,27 @@
 name: Release
 
-on: [push]
+on:
+  push:
+    tags:
+      - "v*.*.*"
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup dotnet ${{ matrix.dotnet-version }}
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: Setup dotnet 8.0
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - name: Display dotnet version
-        run: dotnet --version
+      - name: Build binaries
+        run: make build
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            bin/Release/net8.0/linux-x64/publish/rascript-language-server-linux-x64
+            bin/Release/net8.0/win-x64/publish/rascript-language-server-win-x64.exe
+            bin/Release/net8.0/osx-x64/publish/rascript-language-server-osx-x64
+            bin/Release/net8.0/osx-arm64/publish/rascript-language-server-osx-arm64
