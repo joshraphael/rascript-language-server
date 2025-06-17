@@ -15,6 +15,8 @@ namespace RAScriptLanguageServer
         private readonly TextPositions textPositions;
         private readonly Dictionary<string, Position> functionLocations;
         private readonly Dictionary<string, string[]> comments;
+        private readonly Dictionary<string, CompletionItemKind> keywordKinds;
+        private readonly List<string> keywords;
         private readonly FunctionDefinition[] functionDefinitions;
 
         public Parser(ILanguageServerFacade router, FunctionDefinitions functionDefinitions, string text)
@@ -24,8 +26,15 @@ namespace RAScriptLanguageServer
             this.textPositions = new TextPositions(_router, text);
             this.functionLocations = new Dictionary<string, Position>();
             this.comments = new Dictionary<string, string[]>();
+            this.keywordKinds = new Dictionary<string, CompletionItemKind>();
+            this.keywords = new List<string>();
             this.functionDefinitions = functionDefinitions.functionDefinitions;
             this.Load();
+            Dictionary<string, CompletionItemKind>.KeyCollection keyColl = this.keywordKinds.Keys;
+            foreach (string k in keyColl)
+            {
+                this.keywords.Add(k);
+            }
         }
 
         private void Load()
@@ -35,6 +44,7 @@ namespace RAScriptLanguageServer
                 FunctionDefinition fn = this.functionDefinitions[i];
                 string comment = string.Join("\n", fn.CommentDoc);
                 this.comments.Add(fn.Key, NewHoverData(fn.Key, comment, fn.URL, fn.Args));
+                this.keywordKinds.Add(fn.Key, CompletionItemKind.Function);
             }
             if (text != null && text != "")
             {
@@ -43,6 +53,7 @@ namespace RAScriptLanguageServer
                     string funcName = ItemMatch.Groups.Values.ElementAt(2).ToString();
                     Position pos = this.textPositions.GetPosition(ItemMatch.Index);
                     functionLocations.Add(funcName, pos);
+                    this.keywordKinds.Add(funcName, CompletionItemKind.Function);
                     string comment = "";
                     string untrimmedComment = "";
                     bool blockCommentStarStyle = true;
@@ -295,6 +306,20 @@ namespace RAScriptLanguageServer
             if (this.comments.ContainsKey(word))
             {
                 return this.comments[word];
+            }
+            return null;
+        }
+
+        public string[] GetKeywords()
+        {
+            return this.keywords.ToArray();
+        }
+        
+        public CompletionItemKind? GetKeywordCompletionItemKind(string keyword)
+        {
+            if (this.keywordKinds.ContainsKey(keyword))
+            {
+                return this.keywordKinds[keyword];
             }
             return null;
         }

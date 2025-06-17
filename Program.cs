@@ -23,6 +23,7 @@ namespace RAScriptLanguageServer
                     })
                     .WithHandler<HoverProvider>()
                     .WithHandler<DefinitionProvider>()
+                    .WithHandler<CompletionProvider>()
                 );
 
             await server.WaitForExit;
