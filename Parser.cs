@@ -43,17 +43,22 @@ namespace RAScriptLanguageServer
             {
                 FunctionDefinition fn = this.functionDefinitions[i];
                 string comment = string.Join("\n", fn.CommentDoc);
-                this.comments.Add(fn.Key, NewHoverData(fn.Key, comment, fn.URL, fn.Args));
-                this.keywordKinds.Add(fn.Key, CompletionItemKind.Function);
+                this.comments[fn.Key] = NewHoverData(fn.Key, comment, fn.URL, fn.Args);
+                this.keywordKinds[fn.Key] = CompletionItemKind.Function;
             }
             if (text != null && text != "")
             {
+                foreach (Match ItemMatch in Regex.Matches(text, @"(\w+)\s*="))
+                {
+                    string varName = ItemMatch.Groups.Values.ElementAt(1).ToString();
+                    this.keywordKinds[varName] = CompletionItemKind.Variable;
+                }
                 foreach (Match ItemMatch in Regex.Matches(text, @"(\bfunction\b)\s*(\w+)\s*\(([^\(\)]*)\)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
                 {
                     string funcName = ItemMatch.Groups.Values.ElementAt(2).ToString();
                     Position pos = this.textPositions.GetPosition(ItemMatch.Index);
-                    functionLocations.Add(funcName, pos);
-                    this.keywordKinds.Add(funcName, CompletionItemKind.Function);
+                    functionLocations[funcName] = pos;
+                    this.keywordKinds[funcName] = CompletionItemKind.Function;
                     string comment = "";
                     string untrimmedComment = "";
                     bool blockCommentStarStyle = true;
@@ -155,9 +160,6 @@ namespace RAScriptLanguageServer
                                     }
                                 }
                             }
-                            else
-                            {
-                            }
                             offset = offset + 1;
                         }
                     }
@@ -165,11 +167,11 @@ namespace RAScriptLanguageServer
                     string[] args = ItemMatch.Groups.Values.ElementAt(3).ToString().Split(",").Select(s => s.Trim()).ToArray();
                     if (blockCommentStarStyle)
                     {
-                        this.comments.Add(funcName, NewHoverData(funcName, comment, null, args));
+                        this.comments[funcName] = NewHoverData(funcName, comment, null, args);
                     }
                     else
                     {
-                        this.comments.Add(funcName, NewHoverData(funcName, untrimmedComment, null, args));
+                        this.comments[funcName] = NewHoverData(funcName, untrimmedComment, null, args);
                     }
                 }
             }
