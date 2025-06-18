@@ -2,29 +2,29 @@ SHELL := /bin/bash
 RATOOLS_VERSION := v1.15.1
 
 reset:
-	rm -rf bin/
-	rm -rf obj/
-	rm -rf RATools/ && git submodule update --init --recursive && cd RATools/ && git checkout tags/${RATOOLS_VERSION}
-	dotnet restore
+	rm -rf src/bin/
+	rm -rf src/obj/
+	rm -rf src/RATools/ && git submodule update --init --recursive && cd src/RATools/ && git checkout tags/${RATOOLS_VERSION}
+	dotnet restore src/rascript-language-server.csproj
 
 modify:
-	rm -rf RATools/Tests
-	rm -rf RATools/Core/UI
-	rm -rf RATools/Core/Tests
-	rm -rf RATools/Core/Core/Tests
-	rm -rf RATools/Source/ViewModels
-	rm -rf RATools/Source/Views
-	rm -rf RATools/Core/Database
-	rm -rf RATools/Source/Services
-	rm -rf RATools/Source/Properties/Settings.Designer.cs
-	rm -rf RATools/Core/Tools
-	rm -rf RATools/Source/App.xaml.cs
-	rm -rf RATools/Source/AssemblyInfo.cs
-	rm -rf RATools/Source/rascript-cli/Program.cs
-	sed -i '1iusing Timer = System.Timers.Timer;' RATools/Core/Core/Source/Services/Impl/TimerService.cs
+	rm -rf src/RATools/Tests
+	rm -rf src/RATools/Core/UI
+	rm -rf src/RATools/Core/Tests
+	rm -rf src/RATools/Core/Core/Tests
+	rm -rf src/RATools/Source/ViewModels
+	rm -rf src/RATools/Source/Views
+	rm -rf src/RATools/Core/Database
+	rm -rf src/RATools/Source/Services
+	rm -rf src/RATools/Source/Properties/Settings.Designer.cs
+	rm -rf src/RATools/Core/Tools
+	rm -rf src/RATools/Source/App.xaml.cs
+	rm -rf src/RATools/Source/AssemblyInfo.cs
+	rm -rf src/RATools/Source/rascript-cli/Program.cs
+	sed -i '1iusing Timer = System.Timers.Timer;' src/RATools/Core/Core/Source/Services/Impl/TimerService.cs
 
 run: reset modify
-	dotnet run
+	dotnet run --project src/rascript-language-server.csproj
 
 build: reset modify build-linux-x64 build-win-x64 build-osx-x64 build-osx-arm64
 

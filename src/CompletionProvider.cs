@@ -47,18 +47,6 @@ namespace RAScriptLanguageServer
                     });
                 }
             }
-            // foreach (var k in buffer.GetParser().GetKeywords())
-            // {
-
-            // }
-            // var list = new CompletionList(new List<CompletionItem>()
-            // {
-            //     new CompletionItem()
-            //     {
-            //         Label = "test",
-            //         Kind = CompletionItemKind.Keyword,
-            //     }
-            // });
             return Task.FromResult<CompletionList>(items);
         }
 

@@ -11,4 +11,4 @@ if [[ ${GITHUB_REF_NAME} != "" ]]; then
     PREFIX="_$GITHUB_REF_NAME"
 fi
 
-dotnet publish -r $1 -p:PublishSingleFile=true,AssemblyName=rascript-language-server${PREFIX}_$1 --self-contained true
+dotnet publish src/rascript-language-server.csproj -r $1 -p:PublishSingleFile=true,AssemblyName=rascript-language-server${PREFIX}_$1 --self-contained true
