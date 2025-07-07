@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="OmniSharp.Extensions.LanguageServer" Version="0.19.9" />
+    <PackageReference Include="RASharp" Version="0.0.3" />
   </ItemGroup>
 
 </Project>

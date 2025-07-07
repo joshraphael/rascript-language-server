@@ -1,16 +1,15 @@
-using OmniSharp.Extensions.LanguageServer.Protocol;
 using System.Text.RegularExpressions;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
-using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
-using System.Collections.Generic;
 using System.Text;
+using RASharp.Models;
+using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 
 namespace RAScriptLanguageServer
 {
     public class Parser
     {
-        private readonly ILanguageServerFacade _router;
+        public readonly ILanguageServerFacade _router;
         private readonly string text;
         private readonly TextPositions textPositions;
         private readonly Dictionary<string, Position> functionLocations;
@@ -18,6 +17,8 @@ namespace RAScriptLanguageServer
         private readonly Dictionary<string, CompletionItemKind> keywordKinds;
         private readonly List<string> keywords;
         private readonly FunctionDefinition[] functionDefinitions;
+        private int gameID;
+        private GetCodeNotes? codeNotes;
 
         public Parser(ILanguageServerFacade router, FunctionDefinitions functionDefinitions, string text)
         {
@@ -29,12 +30,36 @@ namespace RAScriptLanguageServer
             this.keywordKinds = new Dictionary<string, CompletionItemKind>();
             this.keywords = new List<string>();
             this.functionDefinitions = functionDefinitions.functionDefinitions;
+            this.gameID = 0; // game id's start at 1 on RA
             this.Load();
             Dictionary<string, CompletionItemKind>.KeyCollection keyColl = this.keywordKinds.Keys;
             foreach (string k in keyColl)
             {
                 this.keywords.Add(k);
             }
+        }
+
+        public void loadCodeNotes(GetCodeNotes? codeNotes)
+        {
+            this.codeNotes = codeNotes;
+            if (this.codeNotes != null && this.codeNotes.Success)
+            {
+                foreach (var note in this.codeNotes.CodeNotes)
+                {
+                    this.comments[note.Address] = [
+                        $"`{note.Address}`",
+                        "---",
+                        $"```txt\n{note.Note}\n```",
+                        "---",
+                        $"Author: [{note.User}](https://retroachievements.org/user/{note.User})",
+                    ];
+                }
+            }
+        }
+
+        public GetCodeNotes? GetCodeNotes()
+        {
+            return this.codeNotes;
         }
 
         private void Load()
@@ -48,6 +73,22 @@ namespace RAScriptLanguageServer
             }
             if (text != null && text != "")
             {
+                foreach (Match ItemMatch in Regex.Matches(text, @"\/\/\s*#ID\s*=\s*(\d+)"))
+                {
+                    string gameIDStr = ItemMatch.Groups.Values.ElementAt(1).ToString();
+                    try
+                    {
+                        int gameID = int.Parse(gameIDStr);
+                        if (gameID > 0)
+                        {
+                            this.gameID = gameID;
+                        }
+                    }
+                    catch (FormatException)
+                    {
+                        this.gameID = 0; // reset the game id
+                    }
+                }
                 foreach (Match ItemMatch in Regex.Matches(text, @"(\w+)\s*="))
                 {
                     string varName = ItemMatch.Groups.Values.ElementAt(1).ToString();
@@ -316,7 +357,7 @@ namespace RAScriptLanguageServer
         {
             return this.keywords.ToArray();
         }
-        
+
         public CompletionItemKind? GetKeywordCompletionItemKind(string keyword)
         {
             if (this.keywordKinds.ContainsKey(keyword))
@@ -324,6 +365,11 @@ namespace RAScriptLanguageServer
                 return this.keywordKinds[keyword];
             }
             return null;
+        }
+
+        public int GetGameID()
+        {
+            return this.gameID;
         }
     }
 }

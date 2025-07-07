@@ -4,9 +4,9 @@ using OmniSharp.Extensions.LanguageServer.Server;
 
 namespace RAScriptLanguageServer
 {
-    class Program
+    public class Program
     {
-        static async Task Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var server = await LanguageServer.From(options =>
                 options

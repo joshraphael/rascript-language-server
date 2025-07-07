@@ -7,6 +7,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using MediatR;
+using RASharp;
 
 
 namespace RAScriptLanguageServer
@@ -21,12 +22,15 @@ namespace RAScriptLanguageServer
         private readonly ILanguageServerFacade _router;
         private readonly BufferManager _bufferManager;
         private readonly FunctionDefinitions _functionDefinitions;
+        private readonly RetroAchievements _retroachievements;
 
         public TextDocumentSyncHandler(ILanguageServerFacade router, BufferManager bufferManager)
         {
             _router = router;
             _bufferManager = bufferManager;
             _functionDefinitions = new FunctionDefinitions();
+            _retroachievements = new RetroAchievements(RetroAchievements.RetroAchievementsHost, "");
+            _bufferManager.SetRAClient(this._retroachievements);
         }
 
         public override TextDocumentAttributes GetTextDocumentAttributes(DocumentUri uri)
@@ -39,7 +43,7 @@ namespace RAScriptLanguageServer
             var documentPath = request.TextDocument.Uri.ToString();
             var text = request.TextDocument.Text;
             Parser p = new Parser(_router, _functionDefinitions, text);
-            _bufferManager.UpdateBuffer(documentPath, new StringBuilder(request.TextDocument.Text), p);
+            _ = _bufferManager.UpdateBufferAsync(documentPath, new StringBuilder(request.TextDocument.Text), p);
             return Unit.Task;
         }
 
@@ -50,7 +54,7 @@ namespace RAScriptLanguageServer
             if (text != null)
             {
                 Parser p = new Parser(_router, _functionDefinitions, text);
-                _bufferManager.UpdateBuffer(documentPath, new StringBuilder(text), p);
+                _ = _bufferManager.UpdateBufferAsync(documentPath, new StringBuilder(text), p);
             }
             return Unit.Task;
         }
