@@ -94,7 +94,7 @@ namespace RAScriptLanguageServer
                     string varName = ItemMatch.Groups.Values.ElementAt(1).ToString();
                     this.keywordKinds[varName] = CompletionItemKind.Variable;
                 }
-                foreach (Match ItemMatch in Regex.Matches(text, @"(\bfunction\b)\s*(\w+)\s*\(([^\(\)]*)\)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
+                foreach (Match ItemMatch in Regex.Matches(text, @"(\bfunction\b)[\t ]*([a-zA-Z][\w]*)[\t ]*\(([^\(\)]*)\)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
                 {
                     string funcName = ItemMatch.Groups.Values.ElementAt(2).ToString();
                     Position pos = this.textPositions.GetPosition(ItemMatch.Index);
