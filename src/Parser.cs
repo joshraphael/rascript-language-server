@@ -4,6 +4,8 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using System.Text;
 using RASharp.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
+using System.Collections;
+using System.Security.AccessControl;
 
 namespace RAScriptLanguageServer
 {
@@ -17,6 +19,7 @@ namespace RAScriptLanguageServer
         private readonly Dictionary<string, CompletionItemKind> keywordKinds;
         private readonly List<string> keywords;
         private readonly FunctionDefinition[] functionDefinitions;
+        private readonly CommentBounds[] commentBounds;
         private int gameID;
         private GetCodeNotes? codeNotes;
 
@@ -30,6 +33,7 @@ namespace RAScriptLanguageServer
             this.keywordKinds = new Dictionary<string, CompletionItemKind>();
             this.keywords = new List<string>();
             this.functionDefinitions = functionDefinitions.functionDefinitions;
+            this.commentBounds = this.GetCommentBoundsList();
             this.gameID = 0; // game id's start at 1 on RA
             this.Load();
             Dictionary<string, CompletionItemKind>.KeyCollection keyColl = this.keywordKinds.Keys;
@@ -105,6 +109,100 @@ namespace RAScriptLanguageServer
                     this.comments[funcName] = NewHoverData(funcName, comment, null, args);
                 }
             }
+        }
+
+        private CommentBounds[] GetCommentBoundsList()
+        {
+            List<CommentBounds> commentBounds = new List<CommentBounds>();
+            bool inComment = false;
+            int tempStart = 0;
+            if (this.text.Length < 2)
+            {
+                return commentBounds.ToArray();
+            }
+            for (int i = 1; i < this.text.Length; i++)
+            {
+                if (inComment)
+                {
+                    if (this.text[i] == '\n' || this.text[i] == '\r')
+                    {
+                        inComment = false;
+                        CommentBounds commentBound = new CommentBounds()
+                        {
+                            Start = tempStart,
+                            End = i - 1,
+                            Type = "Line",
+                            Raw = this.text[tempStart..i]
+                        };
+                        commentBounds.Add(commentBound);
+                    }
+                }
+                else
+                {
+                    if (this.text[i - 1] == '/' && this.text[i] == '/')
+                    {
+                        inComment = true;
+                        tempStart = i - 1;
+                    }
+                }
+                if (i == this.text.Length - 1 && inComment)
+                {
+                    inComment = false;
+                    CommentBounds commentBound = new CommentBounds()
+                    {
+                        Start = tempStart,
+                        End = i,
+                        Type = "Line",
+                        Raw = this.text[tempStart..]
+                    };
+                    commentBounds.Add(commentBound);
+                }
+            }
+            // parse different comment types seperately incase they are mixed together,
+            // the bounds between these two could overlap technically
+
+            // get bounds of block comments
+            inComment = false;
+            tempStart = 0;
+            for (int i = 1; i < this.text.Length; i++)
+            {
+                if (inComment)
+                {
+                    if (this.text[i - 1] == '*' && this.text[i] == '/') // end
+                    {
+                        inComment = false;
+                        CommentBounds commentBound = new CommentBounds
+                        {
+                            Start = tempStart,
+                            End = i - 1,
+                            Type = "Block",
+                            Raw = this.text[tempStart..i]
+                        };
+                        commentBounds.Add(commentBound);
+                    }
+                }
+                else
+                {
+                    if (this.text[i - 1] == '/' && this.text[i] == '*') // start
+                    {
+                        inComment = true;
+                        tempStart = i - 1;
+                    }
+                }
+                if (i == this.text.Length - 1 && inComment)
+                {
+                    inComment = false;
+                    CommentBounds commentBound = new CommentBounds()
+                    {
+                        Start = tempStart,
+                        End = i,
+                        Type = "Block",
+                        Raw = this.text[tempStart..]
+                    };
+                    commentBounds.Add(commentBound);
+                }
+            }
+            return commentBounds.ToArray();
         }
 
         private string GetCommentText(Position pos)
