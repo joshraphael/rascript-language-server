@@ -100,122 +100,125 @@ namespace RAScriptLanguageServer
                     Position pos = this.textPositions.GetPosition(ItemMatch.Index);
                     functionLocations[funcName] = pos;
                     this.keywordKinds[funcName] = CompletionItemKind.Function;
-                    string comment = "";
-                    string untrimmedComment = "";
-                    bool blockCommentStarStyle = true;
-                    if (pos.Line > 0)
-                    {
-                        int offset = 1;
-                        bool inBlock = false;
-                        while (pos.Line - offset >= 0)
-                        {
-                            int lineNum = pos.Line - offset;
-                            string? line = this.textPositions.GetLineAt(lineNum);
-                            if (line != null)
-                            {
-                                line = line.TrimStart();
-                                if (offset == 1)
-                                {
-                                    bool isBlock = Regex.IsMatch(line, @"^.*\*\/$");
-                                    if (isBlock)
-                                    {
-                                        inBlock = true;
-                                    }
-                                }
-                                if (inBlock) // Block comment
-                                {
-                                    bool endBlock = Regex.IsMatch(line, @"^.*\/\*.*$");
-                                    if (endBlock)
-                                    {
-                                        // Trim start token
-                                        string[] trimmedLine = Regex.Split(line, @"\/\*(.*)", RegexOptions.Singleline).Skip(1).ToArray();
-                                        string newLine = string.Join("", trimmedLine).TrimStart();
-
-                                        // Trim end token
-                                        trimmedLine = newLine.Split("*/"); // use whats after the star token
-                                        if (trimmedLine.Length > 2)
-                                        {
-                                            trimmedLine = trimmedLine[..^1]; // remove last element
-                                        }
-                                        newLine = string.Join("", trimmedLine).TrimStart();
-                                        if (blockCommentStarStyle)
-                                        {
-                                            bool starComment = Regex.IsMatch(newLine, @"^\*.*");
-                                            if (!starComment)
-                                            {
-                                                blockCommentStarStyle = false;
-                                            }
-                                        }
-                                        untrimmedComment = "//" + newLine + "\n" + untrimmedComment; // keep an untrimmed version of the comment in case the entire block is prefixed with stars
-
-                                        // Trim first '*' token (in case they comment that way)
-                                        trimmedLine = Regex.Split(newLine, @"^\*(.*)", RegexOptions.Singleline).ToArray();
-                                        if (trimmedLine.Length > 2)
-                                        {
-                                            trimmedLine = trimmedLine[1..]; // remove first element
-                                        }
-                                        newLine = string.Join("", trimmedLine).TrimStart();
-                                        comment = "//" + newLine + "\n" + comment;
-                                        break;
-                                    }
-                                    else // at end of comment block
-                                    {
-                                        // Trim end token (guaranteed to not have text after end token if the user wants comments to appear in hover box)
-                                        string[] trimmedLine = line.Split("*/");
-                                        if (trimmedLine.Length > 2)
-                                        {
-                                            trimmedLine = trimmedLine[..^1]; // remove last element
-                                        }
-                                        string newLine = string.Join("", trimmedLine).TrimStart();
-
-                                        if (blockCommentStarStyle)
-                                        {
-                                            bool starComment = Regex.IsMatch(newLine, @"^\*.*");
-                                            if (!starComment)
-                                            {
-                                                blockCommentStarStyle = false;
-                                            }
-                                        }
-                                        untrimmedComment = "//" + newLine + "\n" + untrimmedComment; // keep an untrimmed version of the comment in case the entire block is prefixed with stars
-
-                                        // Trim first '*' token (in case they comment that way)
-                                        trimmedLine = Regex.Split(newLine, @"^\*(.*)", RegexOptions.Singleline).ToArray();
-                                        if (trimmedLine.Length > 2)
-                                        {
-                                            trimmedLine = trimmedLine[1..]; // remove first element
-                                        }
-                                        newLine = string.Join("", trimmedLine).TrimStart();
-                                        comment = "//" + newLine + "\n" + comment;
-                                    }
-                                }
-                                else // Single line comment
-                                {
-                                    bool isComment = Regex.IsMatch(line, @"^\/\/.*$");
-                                    if (isComment)
-                                    {
-                                        comment = line + "\n" + comment;
-                                    }
-                                    else
-                                    {
-                                        break;
-                                    }
-                                }
-                            }
-                            offset = offset + 1;
-                        }
-                    }
-                    // do something
                     string[] args = ItemMatch.Groups.Values.ElementAt(3).ToString().Split(",").Select(s => s.Trim()).ToArray();
-                    if (blockCommentStarStyle)
-                    {
-                        this.comments[funcName] = NewHoverData(funcName, comment, null, args);
-                    }
-                    else
-                    {
-                        this.comments[funcName] = NewHoverData(funcName, untrimmedComment, null, args);
-                    }
+                    string comment = this.GetCommentText(pos);
+                    this.comments[funcName] = NewHoverData(funcName, comment, null, args);
                 }
             }
+        }
+
+        private string GetCommentText(Position pos)
+        {
+            string comment = "";
+            string untrimmedComment = "";
+            bool blockCommentStarStyle = true;
+            if (pos.Line > 0)
+            {
+                int offset = 1;
+                bool inBlock = false;
+                while (pos.Line - offset >= 0)
+                {
+                    int lineNum = pos.Line - offset;
+                    string? line = this.textPositions.GetLineAt(lineNum);
+                    if (line != null)
+                    {
+                        line = line.TrimStart();
+                        if (offset == 1)
+                        {
+                            bool isBlock = Regex.IsMatch(line, @"^.*\*\/$");
+                            if (isBlock)
+                            {
+                                inBlock = true;
+                            }
+                        }
+                        if (inBlock) // Block comment
+                        {
+                            bool endBlock = Regex.IsMatch(line, @"^.*\/\*.*$");
+                            if (endBlock)
+                            {
+                                // Trim start token
+                                string[] trimmedLine = Regex.Split(line, @"\/\*(.*)", RegexOptions.Singleline).Skip(1).ToArray();
+                                string newLine = string.Join("", trimmedLine).TrimStart();
+
+                                // Trim end token
+                                trimmedLine = newLine.Split("*/"); // use whats after the star token
+                                if (trimmedLine.Length > 2)
+                                {
+                                    trimmedLine = trimmedLine[..^1]; // remove last element
+                                }
+                                newLine = string.Join("", trimmedLine).TrimStart();
+                                if (blockCommentStarStyle)
+                                {
+                                    bool starComment = Regex.IsMatch(newLine, @"^\*.*");
+                                    if (!starComment)
+                                    {
+                                        blockCommentStarStyle = false;
+                                    }
+                                }
+                                untrimmedComment = "//" + newLine + "\n" + untrimmedComment; // keep an untrimmed version of the comment in case the entire block is prefixed with stars
+
+                                // Trim first '*' token (in case they comment that way)
+                                trimmedLine = Regex.Split(newLine, @"^\*(.*)", RegexOptions.Singleline).ToArray();
+                                if (trimmedLine.Length > 2)
+                                {
+                                    trimmedLine = trimmedLine[1..]; // remove first element
+                                }
+                                newLine = string.Join("", trimmedLine).TrimStart();
+                                comment = "//" + newLine + "\n" + comment;
+                                break;
+                            }
+                            else // at end of comment block
+                            {
+                                // Trim end token (guaranteed to not have text after end token if the user wants comments to appear in hover box)
+                                string[] trimmedLine = line.Split("*/");
+                                if (trimmedLine.Length > 2)
+                                {
+                                    trimmedLine = trimmedLine[..^1]; // remove last element
+                                }
+                                string newLine = string.Join("", trimmedLine).TrimStart();
+
+                                if (blockCommentStarStyle)
+                                {
+                                    bool starComment = Regex.IsMatch(newLine, @"^\*.*");
+                                    if (!starComment)
+                                    {
+                                        blockCommentStarStyle = false;
+                                    }
+                                }
+                                untrimmedComment = "//" + newLine + "\n" + untrimmedComment; // keep an untrimmed version of the comment in case the entire block is prefixed with stars
+
+                                // Trim first '*' token (in case they comment that way)
+                                trimmedLine = Regex.Split(newLine, @"^\*(.*)", RegexOptions.Singleline).ToArray();
+                                if (trimmedLine.Length > 2)
+                                {
+                                    trimmedLine = trimmedLine[1..]; // remove first element
+                                }
+                                newLine = string.Join("", trimmedLine).TrimStart();
+                                comment = "//" + newLine + "\n" + comment;
+                            }
+                        }
+                        else // Single line comment
+                        {
+                            bool isComment = Regex.IsMatch(line, @"^\/\/.*$");
+                            if (isComment)
+                            {
+                                comment = line + "\n" + comment;
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                    }
+                    offset = offset + 1;
+                }
+            }
+            string finalComment = untrimmedComment;
+            if (blockCommentStarStyle)
+            {
+                finalComment = comment;
+            }
+            return finalComment;
         }
 
         private string[] NewHoverData(string key, string text, string? docUrl, string[] args)
