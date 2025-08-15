@@ -111,6 +111,35 @@ namespace RAScriptLanguageServer
             }
         }
 
+        private int CountArgsAt(int offset)
+        {
+            int count = 0;
+            if (this.text[offset] == '(')
+            {
+                offset++;
+                while (offset < this.text.Length)
+                {
+                    if (this.text[offset] == ')')
+                    {
+                        break;
+                    }
+                    if (count == 0)
+                    {
+                        count = 1;
+                    }
+                    else
+                    {
+                        if (this.text[offset] == ',')
+                        {
+                            count++;
+                        }
+                    }
+                    offset++;
+                }
+            }
+            return count;
+        }
+
         private CommentBounds[] GetCommentBoundsList()
         {
             List<CommentBounds> commentBounds = new List<CommentBounds>();
