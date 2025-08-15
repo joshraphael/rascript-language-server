@@ -34,6 +34,7 @@ namespace RAScriptLanguageServer
             this.keywords = new List<string>();
             this.functionDefinitions = functionDefinitions.functionDefinitions;
             this.commentBounds = this.GetCommentBoundsList();
+            var data = this.GetClassData();
             this.gameID = 0; // game id's start at 1 on RA
             this.Load();
             Dictionary<string, CompletionItemKind>.KeyCollection keyColl = this.keywordKinds.Keys;
@@ -109,6 +110,95 @@ namespace RAScriptLanguageServer
                     this.comments[funcName] = NewHoverData(funcName, comment, null, args);
                 }
             }
+        }
+
+        public bool InCommentBounds(int index)
+        {
+            for (int i = 0; i < this.commentBounds.Length; i++)
+            {
+                CommentBounds bound = this.commentBounds[i];
+                if (index >= bound.Start && index <= bound.End)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private Dictionary<string, ClassScope> GetClassData()
+        {
+            Dictionary<string, ClassScope> classes = new Dictionary<string, ClassScope>();
+            foreach (Match ItemMatch in Regex.Matches(text, @"(\bclass\b)[\t ]*([a-zA-Z_][\w]*)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
+            {
+                // dont parse if its in a comment
+                if (this.InCommentBounds(ItemMatch.Index))
+                {
+                    continue;
+                }
+                int postClassNameInd = ItemMatch.Index + ItemMatch.Groups.Values.ElementAt(0).Length;
+                int ind = postClassNameInd;
+                Stack<int> stack = new Stack<int>();
+                string strippedText = ""; // this is used to determine the implicit arguments to a class constructor
+                while (ind < this.text.Length)
+                {
+                    // anything other than white space or open curly brace is an error and we just wont parse this class
+                    if (this.text[ind] != ' ' && this.text[ind] != '\n' && this.text[ind] != '\r' && this.text[ind] != '\t' && this.text[ind] != '{')
+                    {
+                        break;
+                    }
+                    if (this.text[ind] == '{')
+                    {
+                        // get the position of the opening curly brace
+                        stack.Push(ind);
+                        break;
+                    }
+                    ind++;
+                }
+                if (stack.Count == 1)
+                {
+                    // if we have a curly brace scope, start parsing to find the end of the scope
+                    ind = stack.Peek() + 1; // next char after our first open curly brace
+                    while (ind < this.text.Length)
+                    {
+                        if (this.text[ind] == '}')
+                        {
+                            stack.Pop();
+                        }
+                        else if (this.text[ind] == '{')
+                        {
+                            stack.Push(ind);
+                        }
+                        else
+                        {
+                            if (stack.Count == 1)
+                            {
+                                // if the code is at the first level of the class (not in a function) append it to our stripped class
+                                strippedText = strippedText + this.text[ind];
+                            }
+                        }
+                        if (stack.Count == 0)
+                        {
+                            // we have found our end position of the scope, break out
+                            break;
+                        }
+                        ind++;
+                    }
+                    List<string> args = new List<string>();
+                    foreach (Match ItemMatch2 in Regex.Matches(strippedText, @"([a-zA-Z_][\w]*)[\t ]*="))
+                    {
+                        args.Add(ItemMatch2.Groups.Values.ElementAt(1).ToString());
+                    }
+                    ClassScope scope = new ClassScope()
+                    {
+                        Start = ItemMatch.Index,
+                        End = ind,
+                        Functions = new Dictionary<string, FunctionDefinition>(),
+                        ConstructorArgs = args.ToArray()
+                    };
+                    classes.Add(ItemMatch.Groups.Values.ElementAt(2).ToString(), scope);
+                }
+            }
+            return classes;
         }
 
         private int CountArgsAt(int offset)

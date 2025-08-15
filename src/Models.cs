@@ -1,5 +1,12 @@
 namespace RAScriptLanguageServer
 {
+    public class ClassScope
+    {
+        public required int Start { get; set; }
+        public required int End { get; set; }
+        public required Dictionary<string, FunctionDefinition> Functions { get; set; }
+        public required string[] ConstructorArgs { get; set; }
+    }
     public class CommentBounds
     {
         public required int Start { get; set; }
