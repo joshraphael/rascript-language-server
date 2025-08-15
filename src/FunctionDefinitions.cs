@@ -1078,12 +1078,4 @@ namespace RAScriptLanguageServer
             };
         }
     }
-
-    public class FunctionDefinition
-    {
-        public required string Key { get; set; }
-        public required string URL { get; set; }
-        public required string[] Args { get; set; }
-        public required string[] CommentDoc { get; set; }
-    }
 }
