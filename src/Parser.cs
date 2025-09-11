@@ -20,6 +20,12 @@ namespace RAScriptLanguageServer
         private readonly List<string> keywords;
         private readonly FunctionDefinition[] functionDefinitions;
         private readonly CommentBounds[] commentBounds;
+        private readonly Dictionary<string, ClassScope> classes;
+        private readonly Dictionary<string, List<ClassFunction>> functionDefinitionsNew;
+        private readonly Dictionary<string, List<HoverData>> words;
+        private readonly List<string> completionFunctions;
+        private readonly List<string> completionVariables;
+        private readonly List<string> completionClasses;
         private int gameID;
         private GetCodeNotes? codeNotes;
 
@@ -35,6 +41,12 @@ namespace RAScriptLanguageServer
             this.functionDefinitions = functionDefinitions.functionDefinitions;
             this.commentBounds = this.GetCommentBoundsList();
             var data = this.GetClassData();
+            this.classes = this.GetClassData();
+            this.functionDefinitionsNew = new Dictionary<string, List<ClassFunction>>();
+            this.words = new Dictionary<string, List<HoverData>>();
+            this.completionFunctions = new List<string>();
+            this.completionVariables = new List<string>();
+            this.completionClasses = new List<string>();
             this.gameID = 0; // game id's start at 1 on RA
             this.Load();
             Dictionary<string, CompletionItemKind>.KeyCollection keyColl = this.keywordKinds.Keys;
@@ -43,6 +55,143 @@ namespace RAScriptLanguageServer
                 this.keywords.Add(k);
             }
         }
+
+        // public Parser(ILanguageServerFacade router, FunctionDefinitions builtinFunctionDefinitions, string text)
+        // {
+        //     _router = router;
+        //     this.text = text;
+        //     this.textPositions = new TextPositions(_router, text);
+        //     this.commentBounds = this.GetCommentBoundsList();
+        //     this.classes = this.GetClassData();
+        //     this.functionDefinitionsNew = new Dictionary<string, List<ClassFunction>>();
+        //     this.words = new Dictionary<string, List<HoverData>>();
+        //     this.completionFunctions = new List<string>();
+        //     this.completionVariables = new List<string>();
+        //     this.completionClasses = new List<string>();
+
+        //     // Parse each built in function in the document
+        //     for (int i = 0; i < builtinFunctionDefinitions.functionDefinitions.Length; i++)
+        //     {
+        //         FunctionDefinition fn = builtinFunctionDefinitions.functionDefinitions[i];
+
+        //         // Add hover data
+        //         string comment = string.Join("\n", fn.CommentDoc);
+        //         HoverData hover = this.NewHoverText(fn.Key, -1, "function", "", comment, fn.URL, fn.Args);
+        //         List<HoverData>? data = this.GetHoverData(fn.Key);
+        //         if (data != null)
+        //         {
+        //             data.Add(hover);
+        //         }
+        //         else
+        //         {
+        //             this.words[fn.Key] = new List<HoverData>
+        //             {
+        //                 hover
+        //             };
+        //         }
+
+        //         // Add completion data
+        //         completionFunctions.Add(fn.Key);
+        //     }
+
+        //     // Parse each class in the document
+        //     foreach (var entry in this.classes)
+        //     {
+        //         string className = entry.Key;
+        //         ClassScope classScope = entry.Value;
+
+        //         // Add hover info
+        //         Position pos = this.textPositions.GetPosition(classScope.Start);
+        //         string comment = this.GetCommentText(pos);
+        //         HoverData hover = this.NewHoverText(className, classScope.Start, "class", "", comment, "", classScope.ConstructorArgs);
+        //         List<HoverData>? data = this.GetHoverData(className);
+        //         if (data != null)
+        //         {
+        //             data.Add(hover);
+        //         }
+        //         else
+        //         {
+        //             this.words[className] = new List<HoverData>
+        //             {
+        //                 hover
+        //             };
+        //         }
+
+        //         // Add completion data
+        //         completionClasses.Add(className);
+        //     }
+        //     if (this.text != null && this.text != "")
+        //     {
+        //         // Parse each function in the document
+        //         foreach (Match ItemMatch in Regex.Matches(text, @"(\bfunction\b)[\t ]*([a-zA-Z][\w]*)[\t ]*\(([^\(\)]*)\)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
+        //         {
+        //             // dont parse if its in a comment
+        //             if (this.InCommentBounds(ItemMatch.Index))
+        //             {
+        //                 continue;
+        //             }
+        //             string className = DetectClass(ItemMatch.Index, this.classes);
+        //             Position pos = this.textPositions.GetPosition(ItemMatch.Index);
+        //             string comment = this.GetCommentText(pos);
+        //             string funcName = ItemMatch.Groups.Values.ElementAt(2).ToString();
+        //             string[] args = ItemMatch.Groups.Values.ElementAt(3).ToString().Split(",").Select(s => s.Trim()).ToArray();
+
+        //             // add definition info
+        //             ClassFunction definition = new ClassFunction
+        //             {
+        //                 ClassName = className,
+        //                 Name = funcName,
+        //                 Pos = pos,
+        //                 Args = args
+        //             };
+        //             List<ClassFunction>? data = this.GetClassFunctionDefinitions(funcName);
+        //             if (data != null)
+        //             {
+        //                 data.Add(definition);
+        //             }
+        //             else
+        //             {
+        //                 this.functionDefinitionsNew[funcName] = new List<ClassFunction>
+        //                 {
+        //                     definition
+        //                 };
+        //             }
+
+        //             // add hover info
+        //             HoverData hover = this.NewHoverText(funcName, ItemMatch.Index, "function", className, comment, "", args);
+        //             List<HoverData>? hoverData = this.GetHoverData(funcName);
+        //             if (hoverData != null)
+        //             {
+        //                 hoverData.Add(hover);
+        //             }
+        //             else
+        //             {
+        //                 this.words[funcName] = new List<HoverData>
+        //                 {
+        //                     hover
+        //                 };
+        //             }
+
+        //             // add completion info
+        //             completionFunctions.Add(funcName);
+        //         }
+
+        //         // Parse each variable in the document
+        //         foreach (Match ItemMatch in Regex.Matches(text, @"([a-zA-Z_][\w]*)[\t ]*="))
+        //         {
+        //             // dont parse if its in a comment
+        //             if (this.InCommentBounds(ItemMatch.Index))
+        //             {
+        //                 continue;
+        //             }
+
+        //             string varName = ItemMatch.Groups.Values.ElementAt(1).ToString();
+
+        //             // add completion info
+        //             completionVariables.Add(varName);
+        //         }
+        //     }
+        // }
 
         public void loadCodeNotes(GetCodeNotes? codeNotes)
         {
@@ -69,11 +218,12 @@ namespace RAScriptLanguageServer
 
         private void Load()
         {
+            var classes = this.GetClassData();
             for (int i = 0; i < this.functionDefinitions.Length; i++)
             {
                 FunctionDefinition fn = this.functionDefinitions[i];
                 string comment = string.Join("\n", fn.CommentDoc);
-                this.comments[fn.Key] = NewHoverData(fn.Key, comment, fn.URL, fn.Args);
+                this.comments[fn.Key] = NewHoverData(fn.Key, -1, "", comment, fn.URL, fn.Args);
                 this.keywordKinds[fn.Key] = CompletionItemKind.Function;
             }
             if (text != null && text != "")
@@ -101,13 +251,14 @@ namespace RAScriptLanguageServer
                 }
                 foreach (Match ItemMatch in Regex.Matches(text, @"(\bfunction\b)[\t ]*([a-zA-Z][\w]*)[\t ]*\(([^\(\)]*)\)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
                 {
+                    string className = DetectClass(ItemMatch.Index, classes);
                     string funcName = ItemMatch.Groups.Values.ElementAt(2).ToString();
                     Position pos = this.textPositions.GetPosition(ItemMatch.Index);
                     functionLocations[funcName] = pos;
                     this.keywordKinds[funcName] = CompletionItemKind.Function;
                     string[] args = ItemMatch.Groups.Values.ElementAt(3).ToString().Split(",").Select(s => s.Trim()).ToArray();
                     string comment = this.GetCommentText(pos);
-                    this.comments[funcName] = NewHoverData(funcName, comment, null, args);
+                    this.comments[funcName] = NewHoverData(funcName, ItemMatch.Index, className, comment, null, args);
                 }
             }
         }
@@ -123,6 +274,17 @@ namespace RAScriptLanguageServer
                 }
             }
             return false;
+        }
+
+        public string DetectClass(int funcPos, Dictionary<string, ClassScope> classData) {
+            foreach (var data in classData)
+            {
+                if (funcPos >= data.Value.Start && funcPos <= data.Value.End)
+                {
+                    return data.Key;
+                }
+            }
+            return "";
         }
 
         private Dictionary<string, ClassScope> GetClassData()
@@ -438,7 +600,93 @@ namespace RAScriptLanguageServer
             return finalComment;
         }
 
-        private string[] NewHoverData(string key, string text, string? docUrl, string[] args)
+        private HoverData NewHoverText(string key, int index, string type, string className, string text, string? docUrl, string[] args)
+        {
+            string argStr = string.Join(", ", args);
+            string[] commentLines = Regex.Split(text, @"\r?\n");
+            List<string> lines = new List<string>();
+            string prefix = "function ";
+            if (className != "")
+            {
+                prefix = $"// class {className}\nfunction ";
+            }
+            lines.Add($"```rascript\n{prefix}{key}({argStr})\n```");
+            if (type == "class")
+            {
+                string fnLine = lines[0];
+                lines.Clear();
+                lines.Add($"```rascript\nclass {key}\n```");
+                lines.Add(fnLine);
+            }
+            if (text != null && text != "")
+            {
+                lines.Add("---");
+                string curr = "";
+                bool codeBlock = false;
+                for (int i = 0; i < commentLines.Length; i++)
+                {
+                    string line = Regex.Replace(commentLines[i], @"^\/\/", "").TrimStart();
+                    if (line.StartsWith("```"))
+                    {
+                        codeBlock = !codeBlock;
+                        if (codeBlock)
+                        {
+                            curr = line;
+                        }
+                        else
+                        {
+                            curr = curr + "\n" + line;
+                            lines.Add(curr);
+                            curr = "";
+                        }
+                        continue;
+                    }
+                    if (line.StartsWith('|') || line.StartsWith('*'))
+                    {
+                        line = line + "\n";
+                    }
+                    if (codeBlock)
+                    {
+                        curr = curr + "\n" + line;
+                    }
+                    else
+                    {
+                        if (line == "")
+                        {
+                            lines.Add(curr);
+                            curr = "";
+                        }
+                        else
+                        {
+                            curr = curr + " " + line;
+                        }
+                    }
+                }
+                if (curr != "")
+                {
+                    lines.Add(curr);
+                }
+                if (codeBlock)
+                {
+                    lines.Add("```");
+                }
+            }
+            if (docUrl != null && docUrl != "")
+            {
+                lines.Add("---");
+                lines.Add($"[Wiki link for `{key}()`]({docUrl})");
+            }
+            return new HoverData
+            {
+                Key = key,
+                Index = index,
+                ClassName = className,
+                Args = args,
+                Lines = lines.ToArray()
+            };
+        }
+
+        private string[] NewHoverData(string key, int index, string className, string text, string? docUrl, string[] args)
         {
             string argStr = string.Join(", ", args);
             string[] commentLines = Regex.Split(text, @"\r?\n");
@@ -583,6 +831,24 @@ namespace RAScriptLanguageServer
             if (this.keywordKinds.ContainsKey(keyword))
             {
                 return this.keywordKinds[keyword];
+            }
+            return null;
+        }
+
+        public List<HoverData>? GetHoverData(string className)
+        {
+            if (this.words.ContainsKey(className))
+            {
+                return this.words[className];
+            }
+            return null;
+        }
+
+        public List<ClassFunction>? GetClassFunctionDefinitions(string className)
+        {
+            if (this.functionDefinitionsNew.ContainsKey(className))
+            {
+                return this.functionDefinitionsNew[className];
             }
             return null;
         }

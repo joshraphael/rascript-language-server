@@ -1,3 +1,5 @@
+using OmniSharp.Extensions.LanguageServer.Protocol.Models;
+
 namespace RAScriptLanguageServer
 {
     public class ClassScope
@@ -20,5 +22,22 @@ namespace RAScriptLanguageServer
         public required string URL { get; set; }
         public required string[] Args { get; set; }
         public required string[] CommentDoc { get; set; }
+    }
+
+    public class ClassFunction
+    {
+        public required string ClassName { get; set; }
+        public required string Name { get; set; }
+        public required Position Pos { get; set; }
+        public required string[] Args { get; set; }
+    }
+
+    public class HoverData
+    {
+        public required string Key { get; set; }
+        public required int Index { get; set; }
+        public required string ClassName { get; set; }
+        public required string[] Args { get; set; }
+        public required string[] Lines { get; set; }
     }
 }
