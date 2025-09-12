@@ -35,16 +35,16 @@ namespace RAScriptLanguageServer
                 var word = buffer?.GetParser().GetWordAtPosition(txt, line, character);
                 if (word != null && word.Length != 0)
                 {
-                    Position? pos = buffer?.GetParser().GetLinkLocation(word);
-                    if (pos != null)
-                    {
-                        var location = new LocationOrLocationLinks(new LocationOrLocationLink(new Location
-                        {
-                            Uri = request.TextDocument.Uri,
-                            Range = new Range(pos, pos)
-                        }));
-                        return Task.FromResult<LocationOrLocationLinks?>(location);
-                    }
+                    // Position? pos = buffer?.GetParser().GetLinkLocation(word);
+                    // if (pos != null)
+                    // {
+                    //     var location = new LocationOrLocationLinks(new LocationOrLocationLink(new Location
+                    //     {
+                    //         Uri = request.TextDocument.Uri,
+                    //         Range = new Range(pos, pos)
+                    //     }));
+                    //     return Task.FromResult<LocationOrLocationLinks?>(location);
+                    // }
                 }
             }
             return Task.FromResult<LocationOrLocationLinks?>(null);

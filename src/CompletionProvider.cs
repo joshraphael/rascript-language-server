@@ -37,15 +37,15 @@ namespace RAScriptLanguageServer
             List<CompletionItem> items = new List<CompletionItem>();
             if (parser != null)
             {
-                foreach (var k in parser.GetKeywords())
-                {
-                    CompletionItemKind kind = parser.GetKeywordCompletionItemKind(k) ?? CompletionItemKind.Text;
-                    items.Add(new CompletionItem()
-                    {
-                        Label = k,
-                        Kind = kind,
-                    });
-                }
+                // foreach (var k in parser.GetKeywords())
+                // {
+                //     CompletionItemKind kind = parser.GetKeywordCompletionItemKind(k) ?? CompletionItemKind.Text;
+                //     items.Add(new CompletionItem()
+                //     {
+                //         Label = k,
+                //         Kind = kind,
+                //     });
+                // }
             }
             return Task.FromResult<CompletionList>(items);
         }

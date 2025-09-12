@@ -12,13 +12,13 @@ namespace RAScriptLanguageServer
     public class Parser
     {
         public readonly ILanguageServerFacade _router;
-        private readonly string text;
+        public readonly string _text;
         private readonly TextPositions textPositions;
-        private readonly Dictionary<string, Position> functionLocations;
-        private readonly Dictionary<string, string[]> comments;
-        private readonly Dictionary<string, CompletionItemKind> keywordKinds;
-        private readonly List<string> keywords;
-        private readonly FunctionDefinition[] functionDefinitions;
+        // private readonly Dictionary<string, Position> functionLocations;
+        // private readonly Dictionary<string, string[]> comments;
+        // private readonly Dictionary<string, CompletionItemKind> keywordKinds;
+        // private readonly List<string> keywords;
+        // private readonly FunctionDefinition[] functionDefinitions;
         private readonly CommentBounds[] commentBounds;
         private readonly Dictionary<string, ClassScope> classes;
         private readonly Dictionary<string, List<ClassFunction>> functionDefinitionsNew;
@@ -29,239 +29,239 @@ namespace RAScriptLanguageServer
         private int gameID;
         private GetCodeNotes? codeNotes;
 
-        public Parser(ILanguageServerFacade router, FunctionDefinitions functionDefinitions, string text)
-        {
-            _router = router;
-            this.text = text;
-            this.textPositions = new TextPositions(_router, text);
-            this.functionLocations = new Dictionary<string, Position>();
-            this.comments = new Dictionary<string, string[]>();
-            this.keywordKinds = new Dictionary<string, CompletionItemKind>();
-            this.keywords = new List<string>();
-            this.functionDefinitions = functionDefinitions.functionDefinitions;
-            this.commentBounds = this.GetCommentBoundsList();
-            var data = this.GetClassData();
-            this.classes = this.GetClassData();
-            this.functionDefinitionsNew = new Dictionary<string, List<ClassFunction>>();
-            this.words = new Dictionary<string, List<HoverData>>();
-            this.completionFunctions = new List<string>();
-            this.completionVariables = new List<string>();
-            this.completionClasses = new List<string>();
-            this.gameID = 0; // game id's start at 1 on RA
-            this.Load();
-            Dictionary<string, CompletionItemKind>.KeyCollection keyColl = this.keywordKinds.Keys;
-            foreach (string k in keyColl)
-            {
-                this.keywords.Add(k);
-            }
-        }
-
-        // public Parser(ILanguageServerFacade router, FunctionDefinitions builtinFunctionDefinitions, string text)
+        // public Parser(ILanguageServerFacade router, FunctionDefinitions functionDefinitions, string text)
         // {
         //     _router = router;
-        //     this.text = text;
-        //     this.textPositions = new TextPositions(_router, text);
+        //     this._text = text;
+        //     this._textPositions = new TextPositions(_router, text);
+        //     this.functionLocations = new Dictionary<string, Position>();
+        //     this.comments = new Dictionary<string, string[]>();
+        //     this.keywordKinds = new Dictionary<string, CompletionItemKind>();
+        //     this.keywords = new List<string>();
+        //     this.functionDefinitions = functionDefinitions.functionDefinitions;
         //     this.commentBounds = this.GetCommentBoundsList();
+        //     var data = this.GetClassData();
         //     this.classes = this.GetClassData();
         //     this.functionDefinitionsNew = new Dictionary<string, List<ClassFunction>>();
         //     this.words = new Dictionary<string, List<HoverData>>();
         //     this.completionFunctions = new List<string>();
         //     this.completionVariables = new List<string>();
         //     this.completionClasses = new List<string>();
-
-        //     // Parse each built in function in the document
-        //     for (int i = 0; i < builtinFunctionDefinitions.functionDefinitions.Length; i++)
+        //     this.gameID = 0; // game id's start at 1 on RA
+        //     this.Load();
+        //     Dictionary<string, CompletionItemKind>.KeyCollection keyColl = this.keywordKinds.Keys;
+        //     foreach (string k in keyColl)
         //     {
-        //         FunctionDefinition fn = builtinFunctionDefinitions.functionDefinitions[i];
-
-        //         // Add hover data
-        //         string comment = string.Join("\n", fn.CommentDoc);
-        //         HoverData hover = this.NewHoverText(fn.Key, -1, "function", "", comment, fn.URL, fn.Args);
-        //         List<HoverData>? data = this.GetHoverData(fn.Key);
-        //         if (data != null)
-        //         {
-        //             data.Add(hover);
-        //         }
-        //         else
-        //         {
-        //             this.words[fn.Key] = new List<HoverData>
-        //             {
-        //                 hover
-        //             };
-        //         }
-
-        //         // Add completion data
-        //         completionFunctions.Add(fn.Key);
-        //     }
-
-        //     // Parse each class in the document
-        //     foreach (var entry in this.classes)
-        //     {
-        //         string className = entry.Key;
-        //         ClassScope classScope = entry.Value;
-
-        //         // Add hover info
-        //         Position pos = this.textPositions.GetPosition(classScope.Start);
-        //         string comment = this.GetCommentText(pos);
-        //         HoverData hover = this.NewHoverText(className, classScope.Start, "class", "", comment, "", classScope.ConstructorArgs);
-        //         List<HoverData>? data = this.GetHoverData(className);
-        //         if (data != null)
-        //         {
-        //             data.Add(hover);
-        //         }
-        //         else
-        //         {
-        //             this.words[className] = new List<HoverData>
-        //             {
-        //                 hover
-        //             };
-        //         }
-
-        //         // Add completion data
-        //         completionClasses.Add(className);
-        //     }
-        //     if (this.text != null && this.text != "")
-        //     {
-        //         // Parse each function in the document
-        //         foreach (Match ItemMatch in Regex.Matches(text, @"(\bfunction\b)[\t ]*([a-zA-Z][\w]*)[\t ]*\(([^\(\)]*)\)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
-        //         {
-        //             // dont parse if its in a comment
-        //             if (this.InCommentBounds(ItemMatch.Index))
-        //             {
-        //                 continue;
-        //             }
-        //             string className = DetectClass(ItemMatch.Index, this.classes);
-        //             Position pos = this.textPositions.GetPosition(ItemMatch.Index);
-        //             string comment = this.GetCommentText(pos);
-        //             string funcName = ItemMatch.Groups.Values.ElementAt(2).ToString();
-        //             string[] args = ItemMatch.Groups.Values.ElementAt(3).ToString().Split(",").Select(s => s.Trim()).ToArray();
-
-        //             // add definition info
-        //             ClassFunction definition = new ClassFunction
-        //             {
-        //                 ClassName = className,
-        //                 Name = funcName,
-        //                 Pos = pos,
-        //                 Args = args
-        //             };
-        //             List<ClassFunction>? data = this.GetClassFunctionDefinitions(funcName);
-        //             if (data != null)
-        //             {
-        //                 data.Add(definition);
-        //             }
-        //             else
-        //             {
-        //                 this.functionDefinitionsNew[funcName] = new List<ClassFunction>
-        //                 {
-        //                     definition
-        //                 };
-        //             }
-
-        //             // add hover info
-        //             HoverData hover = this.NewHoverText(funcName, ItemMatch.Index, "function", className, comment, "", args);
-        //             List<HoverData>? hoverData = this.GetHoverData(funcName);
-        //             if (hoverData != null)
-        //             {
-        //                 hoverData.Add(hover);
-        //             }
-        //             else
-        //             {
-        //                 this.words[funcName] = new List<HoverData>
-        //                 {
-        //                     hover
-        //                 };
-        //             }
-
-        //             // add completion info
-        //             completionFunctions.Add(funcName);
-        //         }
-
-        //         // Parse each variable in the document
-        //         foreach (Match ItemMatch in Regex.Matches(text, @"([a-zA-Z_][\w]*)[\t ]*="))
-        //         {
-        //             // dont parse if its in a comment
-        //             if (this.InCommentBounds(ItemMatch.Index))
-        //             {
-        //                 continue;
-        //             }
-
-        //             string varName = ItemMatch.Groups.Values.ElementAt(1).ToString();
-
-        //             // add completion info
-        //             completionVariables.Add(varName);
-        //         }
+        //         this.keywords.Add(k);
         //     }
         // }
 
-        public void loadCodeNotes(GetCodeNotes? codeNotes)
+        public Parser(ILanguageServerFacade router, FunctionDefinitions builtinFunctionDefinitions, string text)
         {
-            this.codeNotes = codeNotes;
-            if (this.codeNotes != null && this.codeNotes.Success)
+            _router = router;
+            _text = text;
+            this.textPositions = new TextPositions(_router, text);
+            this.commentBounds = this.GetCommentBoundsList();
+            this.classes = this.GetClassData();
+            this.functionDefinitionsNew = new Dictionary<string, List<ClassFunction>>();
+            this.words = new Dictionary<string, List<HoverData>>();
+            this.completionFunctions = new List<string>();
+            this.completionVariables = new List<string>();
+            this.completionClasses = new List<string>();
+
+            // Parse each built in function in the document
+            for (int i = 0; i < builtinFunctionDefinitions.functionDefinitions.Length; i++)
             {
-                foreach (var note in this.codeNotes.CodeNotes)
+                FunctionDefinition fn = builtinFunctionDefinitions.functionDefinitions[i];
+
+                // Add hover data
+                string comment = string.Join("\n", fn.CommentDoc);
+                HoverData hover = this.NewHoverText(fn.Key, -1, "function", "", comment, fn.URL, fn.Args);
+                List<HoverData>? data = this.GetHoverData(fn.Key);
+                if (data != null)
                 {
-                    this.comments[note.Address] = [
-                        $"`{note.Address}`",
-                        "---",
-                        $"```txt\n{note.Note}\n```",
-                        "---",
-                        $"Author: [{note.User}](https://retroachievements.org/user/{note.User})",
-                    ];
+                    data.Add(hover);
+                }
+                else
+                {
+                    this.words[fn.Key] = new List<HoverData>
+                    {
+                        hover
+                    };
+                }
+
+                // Add completion data
+                completionFunctions.Add(fn.Key);
+            }
+
+            // Parse each class in the document
+            foreach (var entry in this.classes)
+            {
+                string className = entry.Key;
+                ClassScope classScope = entry.Value;
+
+                // Add hover info
+                Position pos = this.textPositions.GetPosition(classScope.Start);
+                string comment = this.GetCommentText(pos);
+                HoverData hover = this.NewHoverText(className, classScope.Start, "class", "", comment, "", classScope.ConstructorArgs);
+                List<HoverData>? data = this.GetHoverData(className);
+                if (data != null)
+                {
+                    data.Add(hover);
+                }
+                else
+                {
+                    this.words[className] = new List<HoverData>
+                    {
+                        hover
+                    };
+                }
+
+                // Add completion data
+                completionClasses.Add(className);
+            }
+            if (this._text != null && this._text != "")
+            {
+                // Parse each function in the document
+                foreach (Match ItemMatch in Regex.Matches(text, @"(\bfunction\b)[\t ]*([a-zA-Z][\w]*)[\t ]*\(([^\(\)]*)\)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
+                {
+                    // dont parse if its in a comment
+                    if (this.InCommentBounds(ItemMatch.Index))
+                    {
+                        continue;
+                    }
+                    string className = DetectClass(ItemMatch.Index, this.classes);
+                    Position pos = this.textPositions.GetPosition(ItemMatch.Index);
+                    string comment = this.GetCommentText(pos);
+                    string funcName = ItemMatch.Groups.Values.ElementAt(2).ToString();
+                    string[] args = ItemMatch.Groups.Values.ElementAt(3).ToString().Split(",").Select(s => s.Trim()).ToArray();
+
+                    // add definition info
+                    ClassFunction definition = new ClassFunction
+                    {
+                        ClassName = className,
+                        Name = funcName,
+                        Pos = pos,
+                        Args = args
+                    };
+                    List<ClassFunction>? data = this.GetClassFunctionDefinitions(funcName);
+                    if (data != null)
+                    {
+                        data.Add(definition);
+                    }
+                    else
+                    {
+                        this.functionDefinitionsNew[funcName] = new List<ClassFunction>
+                        {
+                            definition
+                        };
+                    }
+
+                    // add hover info
+                    HoverData hover = this.NewHoverText(funcName, ItemMatch.Index, "function", className, comment, "", args);
+                    List<HoverData>? hoverData = this.GetHoverData(funcName);
+                    if (hoverData != null)
+                    {
+                        hoverData.Add(hover);
+                    }
+                    else
+                    {
+                        this.words[funcName] = new List<HoverData>
+                        {
+                            hover
+                        };
+                    }
+
+                    // add completion info
+                    completionFunctions.Add(funcName);
+                }
+
+                // Parse each variable in the document
+                foreach (Match ItemMatch in Regex.Matches(text, @"([a-zA-Z_][\w]*)[\t ]*="))
+                {
+                    // dont parse if its in a comment
+                    if (this.InCommentBounds(ItemMatch.Index))
+                    {
+                        continue;
+                    }
+
+                    string varName = ItemMatch.Groups.Values.ElementAt(1).ToString();
+
+                    // add completion info
+                    completionVariables.Add(varName);
                 }
             }
         }
+
+        // public void loadCodeNotes(GetCodeNotes? codeNotes)
+        // {
+        //     this.codeNotes = codeNotes;
+        //     if (this.codeNotes != null && this.codeNotes.Success)
+        //     {
+        //         foreach (var note in this.codeNotes.CodeNotes)
+        //         {
+        //             this.comments[note.Address] = [
+        //                 $"`{note.Address}`",
+        //                 "---",
+        //                 $"```txt\n{note.Note}\n```",
+        //                 "---",
+        //                 $"Author: [{note.User}](https://retroachievements.org/user/{note.User})",
+        //             ];
+        //         }
+        //     }
+        // }
 
         public GetCodeNotes? GetCodeNotes()
         {
             return this.codeNotes;
         }
 
-        private void Load()
-        {
-            var classes = this.GetClassData();
-            for (int i = 0; i < this.functionDefinitions.Length; i++)
-            {
-                FunctionDefinition fn = this.functionDefinitions[i];
-                string comment = string.Join("\n", fn.CommentDoc);
-                this.comments[fn.Key] = NewHoverData(fn.Key, -1, "", comment, fn.URL, fn.Args);
-                this.keywordKinds[fn.Key] = CompletionItemKind.Function;
-            }
-            if (text != null && text != "")
-            {
-                foreach (Match ItemMatch in Regex.Matches(text, @"\/\/\s*#ID\s*=\s*(\d+)"))
-                {
-                    string gameIDStr = ItemMatch.Groups.Values.ElementAt(1).ToString();
-                    try
-                    {
-                        int gameID = int.Parse(gameIDStr);
-                        if (gameID > 0)
-                        {
-                            this.gameID = gameID;
-                        }
-                    }
-                    catch (FormatException)
-                    {
-                        this.gameID = 0; // reset the game id
-                    }
-                }
-                foreach (Match ItemMatch in Regex.Matches(text, @"(\w+)\s*="))
-                {
-                    string varName = ItemMatch.Groups.Values.ElementAt(1).ToString();
-                    this.keywordKinds[varName] = CompletionItemKind.Variable;
-                }
-                foreach (Match ItemMatch in Regex.Matches(text, @"(\bfunction\b)[\t ]*([a-zA-Z][\w]*)[\t ]*\(([^\(\)]*)\)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
-                {
-                    string className = DetectClass(ItemMatch.Index, classes);
-                    string funcName = ItemMatch.Groups.Values.ElementAt(2).ToString();
-                    Position pos = this.textPositions.GetPosition(ItemMatch.Index);
-                    functionLocations[funcName] = pos;
-                    this.keywordKinds[funcName] = CompletionItemKind.Function;
-                    string[] args = ItemMatch.Groups.Values.ElementAt(3).ToString().Split(",").Select(s => s.Trim()).ToArray();
-                    string comment = this.GetCommentText(pos);
-                    this.comments[funcName] = NewHoverData(funcName, ItemMatch.Index, className, comment, null, args);
-                }
-            }
-        }
+        // private void Load()
+        // {
+        //     var classes = this.GetClassData();
+        //     for (int i = 0; i < this.functionDefinitions.Length; i++)
+        //     {
+        //         FunctionDefinition fn = this.functionDefinitions[i];
+        //         string comment = string.Join("\n", fn.CommentDoc);
+        //         this.comments[fn.Key] = NewHoverData(fn.Key, -1, "", comment, fn.URL, fn.Args);
+        //         this.keywordKinds[fn.Key] = CompletionItemKind.Function;
+        //     }
+        //     if (text != null && text != "")
+        //     {
+        //         foreach (Match ItemMatch in Regex.Matches(text, @"\/\/\s*#ID\s*=\s*(\d+)"))
+        //         {
+        //             string gameIDStr = ItemMatch.Groups.Values.ElementAt(1).ToString();
+        //             try
+        //             {
+        //                 int gameID = int.Parse(gameIDStr);
+        //                 if (gameID > 0)
+        //                 {
+        //                     this.gameID = gameID;
+        //                 }
+        //             }
+        //             catch (FormatException)
+        //             {
+        //                 this.gameID = 0; // reset the game id
+        //             }
+        //         }
+        //         foreach (Match ItemMatch in Regex.Matches(text, @"(\w+)\s*="))
+        //         {
+        //             string varName = ItemMatch.Groups.Values.ElementAt(1).ToString();
+        //             this.keywordKinds[varName] = CompletionItemKind.Variable;
+        //         }
+        //         foreach (Match ItemMatch in Regex.Matches(text, @"(\bfunction\b)[\t ]*([a-zA-Z][\w]*)[\t ]*\(([^\(\)]*)\)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
+        //         {
+        //             string className = DetectClass(ItemMatch.Index, classes);
+        //             string funcName = ItemMatch.Groups.Values.ElementAt(2).ToString();
+        //             Position pos = this._textPositions.GetPosition(ItemMatch.Index);
+        //             functionLocations[funcName] = pos;
+        //             this.keywordKinds[funcName] = CompletionItemKind.Function;
+        //             string[] args = ItemMatch.Groups.Values.ElementAt(3).ToString().Split(",").Select(s => s.Trim()).ToArray();
+        //             string comment = this.GetCommentText(pos);
+        //             this.comments[funcName] = NewHoverData(funcName, ItemMatch.Index, className, comment, null, args);
+        //         }
+        //     }
+        // }
 
         public bool InCommentBounds(int index)
         {
@@ -290,7 +290,7 @@ namespace RAScriptLanguageServer
         private Dictionary<string, ClassScope> GetClassData()
         {
             Dictionary<string, ClassScope> classes = new Dictionary<string, ClassScope>();
-            foreach (Match ItemMatch in Regex.Matches(text, @"(\bclass\b)[\t ]*([a-zA-Z_][\w]*)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
+            foreach (Match ItemMatch in Regex.Matches(this._text, @"(\bclass\b)[\t ]*([a-zA-Z_][\w]*)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
             {
                 // dont parse if its in a comment
                 if (this.InCommentBounds(ItemMatch.Index))
@@ -301,14 +301,14 @@ namespace RAScriptLanguageServer
                 int ind = postClassNameInd;
                 Stack<int> stack = new Stack<int>();
                 string strippedText = ""; // this is used to determine the implicit arguments to a class constructor
-                while (ind < this.text.Length)
+                while (ind < this._text.Length)
                 {
                     // anything other than white space or open curly brace is an error and we just wont parse this class
-                    if (this.text[ind] != ' ' && this.text[ind] != '\n' && this.text[ind] != '\r' && this.text[ind] != '\t' && this.text[ind] != '{')
+                    if (this._text[ind] != ' ' && this._text[ind] != '\n' && this._text[ind] != '\r' && this._text[ind] != '\t' && this._text[ind] != '{')
                     {
                         break;
                     }
-                    if (this.text[ind] == '{')
+                    if (this._text[ind] == '{')
                     {
                         // get the position of the opening curly brace
                         stack.Push(ind);
@@ -320,13 +320,13 @@ namespace RAScriptLanguageServer
                 {
                     // if we have a curly brace scope, start parsing to find the end of the scope
                     ind = stack.Peek() + 1; // next char after our first open curly brace
-                    while (ind < this.text.Length)
+                    while (ind < this._text.Length)
                     {
-                        if (this.text[ind] == '}')
+                        if (this._text[ind] == '}')
                         {
                             stack.Pop();
                         }
-                        else if (this.text[ind] == '{')
+                        else if (this._text[ind] == '{')
                         {
                             stack.Push(ind);
                         }
@@ -335,7 +335,7 @@ namespace RAScriptLanguageServer
                             if (stack.Count == 1)
                             {
                                 // if the code is at the first level of the class (not in a function) append it to our stripped class
-                                strippedText = strippedText + this.text[ind];
+                                strippedText = strippedText + this._text[ind];
                             }
                         }
                         if (stack.Count == 0)
@@ -366,12 +366,12 @@ namespace RAScriptLanguageServer
         private int CountArgsAt(int offset)
         {
             int count = 0;
-            if (this.text[offset] == '(')
+            if (this._text[offset] == '(')
             {
                 offset++;
-                while (offset < this.text.Length)
+                while (offset < this._text.Length)
                 {
-                    if (this.text[offset] == ')')
+                    if (this._text[offset] == ')')
                     {
                         break;
                     }
@@ -381,7 +381,7 @@ namespace RAScriptLanguageServer
                     }
                     else
                     {
-                        if (this.text[offset] == ',')
+                        if (this._text[offset] == ',')
                         {
                             count++;
                         }
@@ -397,15 +397,15 @@ namespace RAScriptLanguageServer
             List<CommentBounds> commentBounds = new List<CommentBounds>();
             bool inComment = false;
             int tempStart = 0;
-            if (this.text.Length < 2)
+            if (this._text.Length < 2)
             {
                 return commentBounds.ToArray();
             }
-            for (int i = 1; i < this.text.Length; i++)
+            for (int i = 1; i < this._text.Length; i++)
             {
                 if (inComment)
                 {
-                    if (this.text[i] == '\n' || this.text[i] == '\r')
+                    if (this._text[i] == '\n' || this._text[i] == '\r')
                     {
                         inComment = false;
                         CommentBounds commentBound = new CommentBounds()
@@ -413,20 +413,20 @@ namespace RAScriptLanguageServer
                             Start = tempStart,
                             End = i - 1,
                             Type = "Line",
-                            Raw = this.text[tempStart..i]
+                            Raw = this._text[tempStart..i]
                         };
                         commentBounds.Add(commentBound);
                     }
                 }
                 else
                 {
-                    if (this.text[i - 1] == '/' && this.text[i] == '/')
+                    if (this._text[i - 1] == '/' && this._text[i] == '/')
                     {
                         inComment = true;
                         tempStart = i - 1;
                     }
                 }
-                if (i == this.text.Length - 1 && inComment)
+                if (i == this._text.Length - 1 && inComment)
                 {
                     inComment = false;
                     CommentBounds commentBound = new CommentBounds()
@@ -434,7 +434,7 @@ namespace RAScriptLanguageServer
                         Start = tempStart,
                         End = i,
                         Type = "Line",
-                        Raw = this.text[tempStart..]
+                        Raw = this._text[tempStart..]
                     };
                     commentBounds.Add(commentBound);
                 }
@@ -445,11 +445,11 @@ namespace RAScriptLanguageServer
             // get bounds of block comments
             inComment = false;
             tempStart = 0;
-            for (int i = 1; i < this.text.Length; i++)
+            for (int i = 1; i < this._text.Length; i++)
             {
                 if (inComment)
                 {
-                    if (this.text[i - 1] == '*' && this.text[i] == '/') // end
+                    if (this._text[i - 1] == '*' && this._text[i] == '/') // end
                     {
                         inComment = false;
                         CommentBounds commentBound = new CommentBounds
@@ -457,20 +457,20 @@ namespace RAScriptLanguageServer
                             Start = tempStart,
                             End = i - 1,
                             Type = "Block",
-                            Raw = this.text[tempStart..i]
+                            Raw = this._text[tempStart..i]
                         };
                         commentBounds.Add(commentBound);
                     }
                 }
                 else
                 {
-                    if (this.text[i - 1] == '/' && this.text[i] == '*') // start
+                    if (this._text[i - 1] == '/' && this._text[i] == '*') // start
                     {
                         inComment = true;
                         tempStart = i - 1;
                     }
                 }
-                if (i == this.text.Length - 1 && inComment)
+                if (i == this._text.Length - 1 && inComment)
                 {
                     inComment = false;
                     CommentBounds commentBound = new CommentBounds()
@@ -478,7 +478,7 @@ namespace RAScriptLanguageServer
                         Start = tempStart,
                         End = i,
                         Type = "Block",
-                        Raw = this.text[tempStart..]
+                        Raw = this._text[tempStart..]
                     };
                     commentBounds.Add(commentBound);
                 }
@@ -803,37 +803,37 @@ namespace RAScriptLanguageServer
             return char.IsLetterOrDigit(c) || c == '_';
         }
 
-        public Position? GetLinkLocation(string word)
-        {
-            if (this.functionLocations.ContainsKey(word))
-            {
-                return this.functionLocations[word];
-            }
-            return null;
-        }
+        // public Position? GetLinkLocation(string word)
+        // {
+        //     if (this.functionLocations.ContainsKey(word))
+        //     {
+        //         return this.functionLocations[word];
+        //     }
+        //     return null;
+        // }
 
-        public string[]? GetHoverText(string word)
-        {
-            if (this.comments.ContainsKey(word))
-            {
-                return this.comments[word];
-            }
-            return null;
-        }
+        // public string[]? GetHoverText(string word)
+        // {
+        //     if (this.comments.ContainsKey(word))
+        //     {
+        //         return this.comments[word];
+        //     }
+        //     return null;
+        // }
 
-        public string[] GetKeywords()
-        {
-            return this.keywords.ToArray();
-        }
+        // public string[] GetKeywords()
+        // {
+        //     return this.keywords.ToArray();
+        // }
 
-        public CompletionItemKind? GetKeywordCompletionItemKind(string keyword)
-        {
-            if (this.keywordKinds.ContainsKey(keyword))
-            {
-                return this.keywordKinds[keyword];
-            }
-            return null;
-        }
+        // public CompletionItemKind? GetKeywordCompletionItemKind(string keyword)
+        // {
+        //     if (this.keywordKinds.ContainsKey(keyword))
+        //     {
+        //         return this.keywordKinds[keyword];
+        //     }
+        //     return null;
+        // }
 
         public List<HoverData>? GetHoverData(string className)
         {
