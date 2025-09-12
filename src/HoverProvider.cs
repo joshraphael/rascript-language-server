@@ -136,21 +136,41 @@ namespace RAScriptLanguageServer
                                 }
                             }
                         }
+                        if (filteredDefinitions.Count == 1)
+                        {
+                            HoverData definition = filteredDefinitions[0];
+                            var content = new List<MarkedString>();
+                            foreach (var l in definition.Lines)
+                            {
+                                content.Add(new MarkedString(l));
+                            }
+                            Hover result = new()
+                            {
+                                Contents = new MarkedStringsOrMarkupContent(content)
+                            };
+                            return Task.FromResult<Hover?>(result);
+                        }
+                        else
+                        {
+                            // Special case: more than one functions in different classes are named the same and we cant determine the exact hover data
+                            string[] lines = [];
+                            foreach (HoverData defintion in filteredDefinitions)
+                            {
+                                lines = lines.Concat(defintion.Lines).ToArray();
+                            }
+                            HoverData definition = filteredDefinitions[0];
+                            var content = new List<MarkedString>();
+                            foreach (var l in lines)
+                            {
+                                content.Add(new MarkedString(l));
+                            }
+                            Hover result = new()
+                            {
+                                Contents = new MarkedStringsOrMarkupContent(content)
+                            };
+                            return Task.FromResult<Hover?>(result);
+                        }
                     }
-                    // var hoverText = buffer?.GetParser().GetHoverText(word);
-                    // if (hoverText != null && hoverText.Length > 0)
-                    // {
-                    //     var content = new List<MarkedString>();
-                    //     foreach (var l in hoverText)
-                    //     {
-                    //         content.Add(new MarkedString(l));
-                    //     }
-                    //     Hover result = new()
-                    //     {
-                    //         Contents = new MarkedStringsOrMarkupContent(content.ToArray())
-                    //     };
-                    //     return Task.FromResult<Hover?>(result);
-                    // }
                 }
             }
             return Task.FromResult<Hover?>(null);
