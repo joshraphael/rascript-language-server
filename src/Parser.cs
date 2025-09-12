@@ -364,9 +364,10 @@ namespace RAScriptLanguageServer
             return classes;
         }
 
-        private int CountArgsAt(int offset)
+        public int CountArgsAt(int offset)
         {
             int count = 0;
+            offset++; // move one over, the end offset should be at the character at the end of the function name
             if (this._text[offset] == '(')
             {
                 offset++;

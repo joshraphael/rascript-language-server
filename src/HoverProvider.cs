@@ -32,6 +32,7 @@ namespace RAScriptLanguageServer
                 if (word != null && word.Word.Length != 0)
                 {
                     int startingOffset = buffer.GetParser().GetOffsetAt(word.Start);
+                    int endingOffset = buffer.GetParser().GetOffsetAt(word.End);
                     string hoverClass = buffer.GetParser().DetectClass(startingOffset);
                     int offset = startingOffset - 1;
 
@@ -85,6 +86,54 @@ namespace RAScriptLanguageServer
                                     Contents = new MarkedStringsOrMarkupContent(content)
                                 };
                                 return Task.FromResult<Hover?>(result);
+                            }
+                        }
+
+                        // determine list of definitions for function calls found in code bodies
+                        List<HoverData> filteredDefinitions = new List<HoverData>();
+                        foreach (HoverData definition in definitions)
+                        {
+                            if (scope.Global)
+                            {
+                                if (definition.ClassName == "")
+                                {
+                                    // this should only be one occurence, but we can handle multiple
+                                    filteredDefinitions.Add(definition);
+                                }
+                            }
+                            else
+                            {
+                                if (definition.ClassName != "")
+                                {
+                                    // Special case: we can determine the exact definition is the definition if using this.<className>
+                                    if (scope.UsingThis && hoverClass == definition.ClassName)
+                                    {
+                                        var content = new List<MarkedString>();
+                                        foreach (var l in definition.Lines)
+                                        {
+                                            content.Add(new MarkedString(l));
+                                        }
+                                        Hover result = new()
+                                        {
+                                            Contents = new MarkedStringsOrMarkupContent(content)
+                                        };
+                                        return Task.FromResult<Hover?>(result);
+                                    }
+                                    // if its a function, further filter down by arg list length
+                                    // otherwise just append if its a class
+                                    if (wordType.Function)
+                                    {
+                                        int numArgs = buffer.GetParser().CountArgsAt(endingOffset);
+                                        if (numArgs == definition.Args.Length)
+                                        {
+                                            filteredDefinitions.Add(definition);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        filteredDefinitions.Add(definition);
+                                    }
+                                }
                             }
                         }
                     }
