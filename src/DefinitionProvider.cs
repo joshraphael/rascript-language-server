@@ -26,14 +26,12 @@ namespace RAScriptLanguageServer
         public override Task<LocationOrLocationLinks?> Handle(DefinitionParams request, CancellationToken cancellationToken)
         {
             var documentPath = request.TextDocument.Uri.ToString();
-            var line = request.Position.Line;
-            var character = request.Position.Character;
             var buffer = _bufferManager.GetBuffer(documentPath);
             var txt = buffer?.GetDocumentText();
             if (txt != null && txt.Length > 0)
             {
-                var word = buffer?.GetParser().GetWordAtPosition(txt, line, character);
-                if (word != null && word.Length != 0)
+                var word = buffer?.GetParser().GetWordAtPosition(txt, request.Position);
+                if (word != null && word.Word.Length != 0)
                 {
                     // Position? pos = buffer?.GetParser().GetLinkLocation(word);
                     // if (pos != null)

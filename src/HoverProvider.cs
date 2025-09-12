@@ -23,15 +23,15 @@ namespace RAScriptLanguageServer
         public override Task<Hover?> Handle(HoverParams request, CancellationToken cancellationToken)
         {
             var documentPath = request.TextDocument.Uri.ToString();
-            var line = request.Position.Line;
-            var character = request.Position.Character;
+            var t = request.Position;
             var buffer = _bufferManager.GetBuffer(documentPath);
             var txt = buffer?.GetDocumentText();
             if (txt != null && txt.Length > 0)
             {
-                var word = buffer?.GetParser().GetWordAtPosition(txt, line, character);
-                if (word != null && word.Length != 0)
+                var word = buffer?.GetParser().GetWordAtPosition(txt, request.Position);
+                if (word != null && word.Word.Length != 0)
                 {
+                    // string hoverClass = buffer?.GetParser().DetectClass()
                     // var hoverText = buffer?.GetParser().GetHoverText(word);
                     // if (hoverText != null && hoverText.Length > 0)
                     // {

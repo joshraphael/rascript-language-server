@@ -40,4 +40,11 @@ namespace RAScriptLanguageServer
         public required string[] Args { get; set; }
         public required string[] Lines { get; set; }
     }
+
+    public class WordLocation
+    {
+        public required string Word { get; set; }
+        public required int Start { get; set; }
+        public required int End { get; set; }
+    }
 }

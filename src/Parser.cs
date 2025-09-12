@@ -6,6 +6,7 @@ using RASharp.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using System.Collections;
 using System.Security.AccessControl;
+using Microsoft.VisualBasic;
 
 namespace RAScriptLanguageServer
 {
@@ -130,7 +131,7 @@ namespace RAScriptLanguageServer
                     {
                         continue;
                     }
-                    string className = DetectClass(ItemMatch.Index, this.classes);
+                    string className = this.DetectClass(ItemMatch.Index);
                     Position pos = this.textPositions.GetPosition(ItemMatch.Index);
                     string comment = this.GetCommentText(pos);
                     string funcName = ItemMatch.Groups.Values.ElementAt(2).ToString();
@@ -276,8 +277,8 @@ namespace RAScriptLanguageServer
             return false;
         }
 
-        public string DetectClass(int funcPos, Dictionary<string, ClassScope> classData) {
-            foreach (var data in classData)
+        public string DetectClass(int funcPos) {
+            foreach (var data in this.classes)
             {
                 if (funcPos >= data.Value.Start && funcPos <= data.Value.End)
                 {
@@ -753,17 +754,25 @@ namespace RAScriptLanguageServer
             return lines.ToArray();
         }
 
-        public string GetWordAtPosition(string txt, long lineNum, long character)
+        public WordLocation GetWordAtPosition(string txt, Position pos)
         {
             var lines = txt.Split('\n');
-            var line = lines[lineNum];
-            var index = Convert.ToInt32(character);
+            var line = lines[pos.Line];
+            int offset = this.GetOffsetAt(txt, pos);
+            var index = Convert.ToInt32(pos.Character);
+            var leftOffset = offset;
+            var rightOffset = offset;
 
             if (index >= line.Length)
             {
-                return "";
+                return new WordLocation
+                {
+                    Word = "",
+                    Start = -1,
+                    End = -1
+                };
             }
-            var initialChar = line[Convert.ToInt32(character)];
+            var initialChar = line[Convert.ToInt32(pos.Character)];
             StringBuilder word = new StringBuilder();
             if (IsWordLetter(initialChar))
             {
@@ -777,6 +786,7 @@ namespace RAScriptLanguageServer
                         if (IsWordLetter(line[i]))
                         {
                             word.Insert(0, line[i]); // Prepend
+                            leftOffset--;
                             continue;
                         }
                         break;
@@ -789,13 +799,41 @@ namespace RAScriptLanguageServer
                         if (IsWordLetter(line[i]))
                         {
                             word.Append(line[i]);
+                            rightOffset++;
                             continue;
                         }
                         break;
                     }
                 }
             }
-            return word.ToString();
+            return new WordLocation
+                {
+                    Word = word.ToString(),
+                    Start = leftOffset,
+                    End = rightOffset
+                };
+        }
+
+        public int GetOffsetAt(string txt, Position pos)
+        {
+            var lines = txt.Split('\n');
+            var line = lines[pos.Line];
+            var index = Convert.ToInt32(pos.Character);
+            var leftInd = Convert.ToInt32(pos.Character);
+            var rightInd = Convert.ToInt32(pos.Character);
+
+            if (index >= line.Length)
+            {
+                return -1;
+            }
+            var realLines = new List<string>();
+            for (int i = 0; i < pos.Line; i++)
+            {
+                realLines.Add(lines[i]);
+            }
+            var partialString = line.Substring(0, index);
+            realLines.Add(partialString);
+            return String.Join("\n", realLines.ToArray()).Length;
         }
 
         public static bool IsWordLetter(char c)
