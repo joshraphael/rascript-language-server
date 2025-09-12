@@ -44,7 +44,13 @@ namespace RAScriptLanguageServer
     public class WordLocation
     {
         public required string Word { get; set; }
-        public required int Start { get; set; }
-        public required int End { get; set; }
+        public required Position Start { get; set; }
+        public required Position End { get; set; }
+    }
+
+    public class WordScope
+    {
+        public required bool Global { get; set; }
+        public required bool UsingThis { get; set; }
     }
 }

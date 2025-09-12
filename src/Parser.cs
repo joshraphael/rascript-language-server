@@ -758,18 +758,17 @@ namespace RAScriptLanguageServer
         {
             var lines = txt.Split('\n');
             var line = lines[pos.Line];
-            int offset = this.GetOffsetAt(txt, pos);
             var index = Convert.ToInt32(pos.Character);
-            var leftOffset = offset;
-            var rightOffset = offset;
+            var leftIndex = Convert.ToInt32(pos.Character);
+            var rightIndex = Convert.ToInt32(pos.Character);
 
             if (index >= line.Length)
             {
                 return new WordLocation
                 {
                     Word = "",
-                    Start = -1,
-                    End = -1
+                    Start = pos,
+                    End = pos
                 };
             }
             var initialChar = line[Convert.ToInt32(pos.Character)];
@@ -786,7 +785,7 @@ namespace RAScriptLanguageServer
                         if (IsWordLetter(line[i]))
                         {
                             word.Insert(0, line[i]); // Prepend
-                            leftOffset--;
+                            leftIndex = i;
                             continue;
                         }
                         break;
@@ -799,7 +798,7 @@ namespace RAScriptLanguageServer
                         if (IsWordLetter(line[i]))
                         {
                             word.Append(line[i]);
-                            rightOffset++;
+                            rightIndex = i;
                             continue;
                         }
                         break;
@@ -809,14 +808,22 @@ namespace RAScriptLanguageServer
             return new WordLocation
                 {
                     Word = word.ToString(),
-                    Start = leftOffset,
-                    End = rightOffset
+                    Start = new Position
+                    {
+                        Line = pos.Line,
+                        Character = leftIndex,
+                    },
+                    End = new Position
+                    {
+                        Line = pos.Line,
+                        Character = rightIndex,
+                    },
                 };
         }
 
-        public int GetOffsetAt(string txt, Position pos)
+        public int GetOffsetAt(Position pos)
         {
-            var lines = txt.Split('\n');
+            var lines = this._text.Split('\n');
             var line = lines[pos.Line];
             var index = Convert.ToInt32(pos.Character);
             var leftInd = Convert.ToInt32(pos.Character);
@@ -834,6 +841,31 @@ namespace RAScriptLanguageServer
             var partialString = line.Substring(0, index);
             realLines.Add(partialString);
             return String.Join("\n", realLines.ToArray()).Length;
+        }
+
+        public WordScope GetScope(Position pos)
+        {
+            bool global = true;
+            bool usingThis = false;
+            int offset = this.GetOffsetAt(pos) - 1;
+
+            while (global && offset >= 0)
+            {
+                if (this._text[offset] != ' ' && this._text[offset] != '\t' && this._text[offset] != '.')
+                {
+                    break;
+                }
+                if (this._text[offset] == '.')
+                { 
+                    
+                }
+                offset--;
+            }
+            return new WordScope
+            {
+                Global = global,
+                UsingThis = usingThis
+            };
         }
 
         public static bool IsWordLetter(char c)

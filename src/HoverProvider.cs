@@ -29,10 +29,11 @@ namespace RAScriptLanguageServer
             if (buffer != null && txt != null && txt.Length > 0)
             {
                 var word = buffer.GetParser().GetWordAtPosition(txt, request.Position);
-                if (word != null && word.Word.Length != 0 && word.Start != -1 && word.End != -1)
+                if (word != null && word.Word.Length != 0)
                 {
-                    string hoverClass = buffer.GetParser().DetectClass(word.Start);
-                    int offset = word.Start - 1;
+                    int startingOffset = buffer.GetParser().GetOffsetAt(word.Start);
+                    string hoverClass = buffer.GetParser().DetectClass(startingOffset);
+                    int offset = startingOffset - 1;
 
                     // Special case: this keyword should show the class hover info
                     if (word.Word == "this")
@@ -58,6 +59,7 @@ namespace RAScriptLanguageServer
                             }
                         }
                     }
+                    WordScope scope = buffer.GetParser().GetScope(word.Start);
                     // var hoverText = buffer?.GetParser().GetHoverText(word);
                     // if (hoverText != null && hoverText.Length > 0)
                     // {
