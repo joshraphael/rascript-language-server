@@ -53,4 +53,10 @@ namespace RAScriptLanguageServer
         public required bool Global { get; set; }
         public required bool UsingThis { get; set; }
     }
+
+    public class WordType
+    {
+        public required bool Function { get; set; }
+        public required bool Class { get; set; }
+    }
 }

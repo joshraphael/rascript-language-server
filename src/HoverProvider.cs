@@ -38,10 +38,10 @@ namespace RAScriptLanguageServer
                     // Special case: this keyword should show the class hover info
                     if (word.Word == "this")
                     {
-                        List<HoverData>? definitions = buffer.GetParser().GetHoverData(hoverClass);
-                        if (definitions != null)
+                        List<HoverData>? classDefinitions = buffer.GetParser().GetHoverData(hoverClass);
+                        if (classDefinitions != null)
                         {
-                            foreach (HoverData hoverData in definitions)
+                            foreach (HoverData hoverData in classDefinitions)
                             {
                                 if (hoverData.ClassName == "")
                                 {
@@ -60,6 +60,34 @@ namespace RAScriptLanguageServer
                         }
                     }
                     WordScope scope = buffer.GetParser().GetScope(word.Start);
+                    List<HoverData>? definitions = buffer.GetParser().GetHoverData(word.Word);
+                    if (definitions != null)
+                    {
+                        WordType wordType = buffer.GetParser().GetWordType(word);
+                        if (!wordType.Function && !wordType.Class)
+                        {
+                            // only provide hover data for classes and functions
+                            return Task.FromResult<Hover?>(null);
+                        }
+                        // if we are hovering over the actual function signature itself, find it and return it
+                        foreach (HoverData definition in definitions)
+                        {
+                            // magic number 9 here is length of word function plus a space in between the function name
+                            if (startingOffset >= definition.Index && startingOffset <= definition.Index + 9 + definition.Key.Length)
+                            {
+                                var content = new List<MarkedString>();
+                                foreach (var l in definition.Lines)
+                                {
+                                    content.Add(new MarkedString(l));
+                                }
+                                Hover result = new()
+                                {
+                                    Contents = new MarkedStringsOrMarkupContent(content)
+                                };
+                                return Task.FromResult<Hover?>(result);
+                            }
+                        }
+                    }
                     // var hoverText = buffer?.GetParser().GetHoverText(word);
                     // if (hoverText != null && hoverText.Length > 0)
                     // {

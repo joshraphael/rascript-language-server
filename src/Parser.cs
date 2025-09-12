@@ -13,7 +13,7 @@ namespace RAScriptLanguageServer
     public class Parser
     {
         public readonly ILanguageServerFacade _router;
-        public readonly string _text;
+        private readonly string _text;
         private readonly TextPositions textPositions;
         // private readonly Dictionary<string, Position> functionLocations;
         // private readonly Dictionary<string, string[]> comments;
@@ -60,7 +60,7 @@ namespace RAScriptLanguageServer
         public Parser(ILanguageServerFacade router, FunctionDefinitions builtinFunctionDefinitions, string text)
         {
             _router = router;
-            _text = text;
+            this._text = text;
             this.textPositions = new TextPositions(_router, text);
             this.commentBounds = this.GetCommentBoundsList();
             this.classes = this.GetClassData();
@@ -856,8 +856,17 @@ namespace RAScriptLanguageServer
                     break;
                 }
                 if (this._text[offset] == '.')
-                { 
-                    
+                {
+                    // in here means the previous non whitespace character next to the word hovered over is a dot which is the class attribute accessor operator
+                    global = false;
+                    if (offset - 4 >= 0)
+                    {
+                        if (this._text[offset - 4] == 't' && this._text[offset - 3] == 'h' && this._text[offset - 2] == 'i' && this._text[offset - 1] == 's')
+                        {
+                            usingThis = true;
+                        }
+                    }
+                    break;
                 }
                 offset--;
             }
@@ -865,6 +874,46 @@ namespace RAScriptLanguageServer
             {
                 Global = global,
                 UsingThis = usingThis
+            };
+        }
+
+        public WordType GetWordType(WordLocation location)
+        {
+            bool fn = false;
+            bool cls = false;
+            int startOffset = this.GetOffsetAt(location.Start);
+            int endOffset = this.GetOffsetAt(location.End);
+
+            // check for function
+            if (endOffset+1 <= this._text.Length && this._text[endOffset+1] == '(')
+            {
+                fn = true;
+            }
+            int offset = startOffset - 1;
+            while (offset >= 0)
+            {
+                // start searching for the previous word to be 'class'
+                if (this._text[offset] != ' ' && this._text[offset] != '\t' && this._text[offset] != 's')
+                {
+                    break;
+                }
+                if (this._text[offset] == 's')
+                {
+                    if (offset - 4 >= 0)
+                    {
+                        if (this._text[offset - 4] == 'c' && this._text[offset - 3] == 'l' && this._text[offset - 2] == 'a' && this._text[offset - 1] == 's')
+                        {
+                            cls = true;
+                        }
+                    }
+                    break;
+                }
+                offset--;
+            }
+            return new WordType
+            {
+                Function = fn,
+                Class = cls,
             };
         }
 
