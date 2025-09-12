@@ -35,3 +35,4 @@ C:\Users\joshraphael\rascript-language-server_v0.0.1_win-x64.exe
 ## Projects Using rascript-language-server
 - [vscode-rascript](https://github.com/joshraphael/vscode-rascript) - VSCode language client for RAScript.
 - [sublime-rascript](https://github.com/joshraphael/sublime-rascript) - SublimeText language client for RAScript.
+- [npp-rascript](https://github.com/joshraphael/npp-rascript) - Notepad++ language client for RAScript.
