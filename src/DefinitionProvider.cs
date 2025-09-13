@@ -44,8 +44,6 @@ namespace RAScriptLanguageServer
                     List<ClassFunction>? list = buffer.GetParser().GetClassFunctionDefinitions(word.Word);
                     if (list != null)
                     {
-                        int origOffset = buffer.GetParser().GetOffsetAt(word.Start);
-                        int offset = origOffset - 1;
                         WordScope scope = buffer.GetParser().GetScope(word.Start);
                         List<ClassFunction> filteredList = list.Where(buffer.GetParser().ClassFilter(scope.Global, scope.UsingThis, hoverClass)).ToList();
                         // can only link to one location, so anything that has multiple definitions wont work for code jumping

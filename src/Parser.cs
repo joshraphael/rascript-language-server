@@ -22,11 +22,11 @@ namespace RAScriptLanguageServer
         // private readonly FunctionDefinition[] functionDefinitions;
         private readonly CommentBounds[] commentBounds;
         private readonly Dictionary<string, ClassScope> classes;
-        public readonly Dictionary<string, List<ClassFunction>> functionDefinitionsNew;
+        private readonly Dictionary<string, List<ClassFunction>> functionDefinitions;
         private readonly Dictionary<string, List<HoverData>> words;
-        private readonly List<string> completionFunctions;
-        private readonly List<string> completionVariables;
-        private readonly List<string> completionClasses;
+        public readonly List<string> completionFunctions;
+        public readonly List<string> completionVariables;
+        public readonly List<string> completionClasses;
         private int gameID;
         private GetCodeNotes? codeNotes;
 
@@ -64,7 +64,7 @@ namespace RAScriptLanguageServer
             this.textPositions = new TextPositions(_router, text);
             this.commentBounds = this.GetCommentBoundsList();
             this.classes = this.GetClassData();
-            this.functionDefinitionsNew = new Dictionary<string, List<ClassFunction>>();
+            this.functionDefinitions = new Dictionary<string, List<ClassFunction>>();
             this.words = new Dictionary<string, List<HoverData>>();
             this.completionFunctions = new List<string>();
             this.completionVariables = new List<string>();
@@ -152,7 +152,7 @@ namespace RAScriptLanguageServer
                     }
                     else
                     {
-                        this.functionDefinitionsNew[funcName] = new List<ClassFunction>
+                        this.functionDefinitions[funcName] = new List<ClassFunction>
                         {
                             definition
                         };
@@ -982,9 +982,9 @@ namespace RAScriptLanguageServer
 
         public List<ClassFunction>? GetClassFunctionDefinitions(string className)
         {
-            if (this.functionDefinitionsNew.ContainsKey(className))
+            if (this.functionDefinitions.ContainsKey(className))
             {
-                return this.functionDefinitionsNew[className];
+                return this.functionDefinitions[className];
             }
             return null;
         }
