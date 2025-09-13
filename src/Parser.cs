@@ -22,7 +22,7 @@ namespace RAScriptLanguageServer
         // private readonly FunctionDefinition[] functionDefinitions;
         private readonly CommentBounds[] commentBounds;
         private readonly Dictionary<string, ClassScope> classes;
-        private readonly Dictionary<string, List<ClassFunction>> functionDefinitionsNew;
+        public readonly Dictionary<string, List<ClassFunction>> functionDefinitionsNew;
         private readonly Dictionary<string, List<HoverData>> words;
         private readonly List<string> completionFunctions;
         private readonly List<string> completionVariables;
@@ -755,9 +755,25 @@ namespace RAScriptLanguageServer
             return lines.ToArray();
         }
 
-        public WordLocation GetWordAtPosition(string txt, Position pos)
+        public Func<ClassFunction, bool> ClassFilter(bool global, bool usingThis, string className)
         {
-            var lines = txt.Split('\n');
+            return (el) =>
+            {
+                if (global)
+                {
+                    return el.ClassName == "";
+                }
+                else if (usingThis)
+                {
+                    return el.ClassName == className;
+                }
+                return el.ClassName != "";
+            };
+        }
+
+        public WordLocation GetWordAtPosition(Position pos)
+        {
+            var lines = this._text.Split('\n');
             var line = lines[pos.Line];
             var index = Convert.ToInt32(pos.Character);
             var leftIndex = Convert.ToInt32(pos.Character);
@@ -807,19 +823,19 @@ namespace RAScriptLanguageServer
                 }
             }
             return new WordLocation
+            {
+                Word = word.ToString(),
+                Start = new Position
                 {
-                    Word = word.ToString(),
-                    Start = new Position
-                    {
-                        Line = pos.Line,
-                        Character = leftIndex,
-                    },
-                    End = new Position
-                    {
-                        Line = pos.Line,
-                        Character = rightIndex,
-                    },
-                };
+                    Line = pos.Line,
+                    Character = leftIndex,
+                },
+                End = new Position
+                {
+                    Line = pos.Line,
+                    Character = rightIndex,
+                },
+            };
         }
 
         public int GetOffsetAt(Position pos)

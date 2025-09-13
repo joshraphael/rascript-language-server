@@ -28,7 +28,7 @@ namespace RAScriptLanguageServer
             var txt = buffer?.GetDocumentText();
             if (buffer != null && txt != null && txt.Length > 0)
             {
-                var word = buffer.GetParser().GetWordAtPosition(txt, request.Position);
+                var word = buffer.GetParser().GetWordAtPosition(request.Position);
                 if (word != null && word.Word.Length != 0)
                 {
                     int startingOffset = buffer.GetParser().GetOffsetAt(word.Start);
