@@ -36,6 +36,7 @@ namespace RAScriptLanguageServer
     {
         public required string Key { get; set; }
         public required int Index { get; set; }
+        public required string Type { get; set; }
         public required string ClassName { get; set; }
         public required string[] Args { get; set; }
         public required string[] Lines { get; set; }
@@ -58,5 +59,6 @@ namespace RAScriptLanguageServer
     {
         public required bool Function { get; set; }
         public required bool Class { get; set; }
+        public required bool CodeNote { get; set; }
     }
 }

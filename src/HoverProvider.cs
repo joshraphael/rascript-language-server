@@ -65,9 +65,9 @@ namespace RAScriptLanguageServer
                     if (definitions != null)
                     {
                         WordType wordType = buffer.GetParser().GetWordType(word);
-                        if (!wordType.Function && !wordType.Class)
+                        if (!wordType.Function && !wordType.Class && !wordType.CodeNote)
                         {
-                            // only provide hover data for classes and functions
+                            // only provide hover data for code notes, classes and functions
                             return Task.FromResult<Hover?>(null);
                         }
                         // if we are hovering over the actual function signature itself, find it and return it

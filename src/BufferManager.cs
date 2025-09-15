@@ -40,7 +40,7 @@ namespace RAScriptLanguageServer
                     }
                 }
             }
-            // p.loadCodeNotes(codeNotes);
+            p.loadCodeNotes(codeNotes);
             RAScript rascript = new RAScript(documentPath, buffer, p);
             _buffers.AddOrUpdate(documentPath, rascript, (k, v) => rascript);
         }

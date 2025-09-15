@@ -29,6 +29,7 @@ namespace RAScriptLanguageServer
         public readonly List<string> completionClasses;
         private int gameID;
         private GetCodeNotes? codeNotes;
+        private Dictionary<string, List<string>> codeNotesLines;
 
         // public Parser(ILanguageServerFacade router, FunctionDefinitions functionDefinitions, string text)
         // {
@@ -66,9 +67,29 @@ namespace RAScriptLanguageServer
             this.classes = this.GetClassData();
             this.functionDefinitions = new Dictionary<string, List<ClassFunction>>();
             this.words = new Dictionary<string, List<HoverData>>();
+            this.codeNotesLines = new Dictionary<string, List<string>>();
             this.completionFunctions = new List<string>();
             this.completionVariables = new List<string>();
             this.completionClasses = new List<string>();
+            this.gameID = 0; // game id's start at 1 on RA
+
+            // find the game id in the document
+            foreach (Match ItemMatch in Regex.Matches(text, @"\/\/\s*#ID\s*=\s*(\d+)"))
+            {
+                string gameIDStr = ItemMatch.Groups.Values.ElementAt(1).ToString();
+                try
+                {
+                    int gameID = int.Parse(gameIDStr);
+                    if (gameID > 0)
+                    {
+                        this.gameID = gameID;
+                    }
+                }
+                catch (FormatException)
+                {
+                    this.gameID = 0; // reset the game id
+                }
+            }
 
             // Parse each built in function in the document
             for (int i = 0; i < builtinFunctionDefinitions.functionDefinitions.Length; i++)
@@ -77,18 +98,21 @@ namespace RAScriptLanguageServer
 
                 // Add hover data
                 string comment = string.Join("\n", fn.CommentDoc);
-                HoverData hover = this.NewHoverText(fn.Key, -1, "function", "", comment, fn.URL, fn.Args);
-                List<HoverData>? data = this.GetHoverData(fn.Key);
-                if (data != null)
+                HoverData? hover = this.NewHoverText(fn.Key, -1, "function", "", comment, fn.URL, fn.Args);
+                if (hover != null)
                 {
-                    data.Add(hover);
-                }
-                else
-                {
-                    this.words[fn.Key] = new List<HoverData>
+                    List<HoverData>? data = this.GetHoverData(fn.Key);
+                    if (data != null)
                     {
-                        hover
-                    };
+                        data.Add(hover);
+                    }
+                    else
+                    {
+                        this.words[fn.Key] = new List<HoverData>
+                        {
+                            hover
+                        };
+                    }
                 }
 
                 // Add completion data
@@ -104,22 +128,26 @@ namespace RAScriptLanguageServer
                 // Add hover info
                 Position pos = this.textPositions.GetPosition(classScope.Start);
                 string comment = this.GetCommentText(pos);
-                HoverData hover = this.NewHoverText(className, classScope.Start, "class", "", comment, "", classScope.ConstructorArgs);
-                List<HoverData>? data = this.GetHoverData(className);
-                if (data != null)
+                HoverData? hover = this.NewHoverText(className, classScope.Start, "class", "", comment, "", classScope.ConstructorArgs);
+                if (hover != null)
                 {
-                    data.Add(hover);
-                }
-                else
-                {
-                    this.words[className] = new List<HoverData>
+                    this._router.Window.LogInfo($"HEREERE");
+                    List<HoverData>? data = this.GetHoverData(className);
+                    if (data != null)
+                    {
+                        data.Add(hover);
+                    }
+                    else
+                    {
+                        this.words[className] = new List<HoverData>
                     {
                         hover
                     };
+                    }
                 }
 
                 // Add completion data
-                completionClasses.Add(className);
+                    completionClasses.Add(className);
             }
             if (this._text != null && this._text != "")
             {
@@ -159,22 +187,25 @@ namespace RAScriptLanguageServer
                     }
 
                     // add hover info
-                    HoverData hover = this.NewHoverText(funcName, ItemMatch.Index, "function", className, comment, "", args);
-                    List<HoverData>? hoverData = this.GetHoverData(funcName);
-                    if (hoverData != null)
+                    HoverData? hover = this.NewHoverText(funcName, ItemMatch.Index, "function", className, comment, "", args);
+                    if (hover != null)
                     {
-                        hoverData.Add(hover);
-                    }
-                    else
-                    {
-                        this.words[funcName] = new List<HoverData>
+                        List<HoverData>? hoverData = this.GetHoverData(funcName);
+                        if (hoverData != null)
+                        {
+                            hoverData.Add(hover);
+                        }
+                        else
+                        {
+                            this.words[funcName] = new List<HoverData>
                         {
                             hover
                         };
+                        }
                     }
 
                     // add completion info
-                    completionFunctions.Add(funcName);
+                        completionFunctions.Add(funcName);
                 }
 
                 // Parse each variable in the document
@@ -194,23 +225,25 @@ namespace RAScriptLanguageServer
             }
         }
 
-        // public void loadCodeNotes(GetCodeNotes? codeNotes)
-        // {
-        //     this.codeNotes = codeNotes;
-        //     if (this.codeNotes != null && this.codeNotes.Success)
-        //     {
-        //         foreach (var note in this.codeNotes.CodeNotes)
-        //         {
-        //             this.comments[note.Address] = [
-        //                 $"`{note.Address}`",
-        //                 "---",
-        //                 $"```txt\n{note.Note}\n```",
-        //                 "---",
-        //                 $"Author: [{note.User}](https://retroachievements.org/user/{note.User})",
-        //             ];
-        //         }
-        //     }
-        // }
+        public void loadCodeNotes(GetCodeNotes? codeNotes)
+        {
+            this.codeNotes = codeNotes;
+            if (this.codeNotes != null && this.codeNotes.Success)
+            {
+                foreach (var note in this.codeNotes.CodeNotes)
+                {
+                    List<string> lines =
+                    [
+                        $"`{note.Address}`",
+                        "---",
+                        $"```txt\n{note.Note}\n```",
+                        "---",
+                        $"Author: [{note.User}](https://retroachievements.org/user/{note.User})",
+                    ];
+                    this.codeNotesLines[note.Address] = lines;
+                }
+            }
+        }
 
         public GetCodeNotes? GetCodeNotes()
         {
@@ -602,90 +635,119 @@ namespace RAScriptLanguageServer
             return finalComment;
         }
 
-        private HoverData NewHoverText(string key, int index, string type, string className, string text, string? docUrl, string[] args)
+        private List<string> parseCommenText(string comment)
         {
-            string argStr = string.Join(", ", args);
-            string[] commentLines = Regex.Split(text, @"\r?\n");
             List<string> lines = new List<string>();
-            string prefix = "function ";
-            if (className != "")
+            string[] commentLines = Regex.Split(comment, @"\r?\n");
+            lines.Add("---");
+            string curr = "";
+            bool codeBlock = false;
+            for (int i = 0; i < commentLines.Length; i++)
             {
-                prefix = $"// class {className}\nfunction ";
-            }
-            lines.Add($"```rascript\n{prefix}{key}({argStr})\n```");
-            if (type == "class")
-            {
-                string fnLine = lines[0];
-                lines.Clear();
-                lines.Add($"```rascript\nclass {key}\n```");
-                lines.Add(fnLine);
-            }
-            if (text != null && text != "")
-            {
-                lines.Add("---");
-                string curr = "";
-                bool codeBlock = false;
-                for (int i = 0; i < commentLines.Length; i++)
+                string line = Regex.Replace(commentLines[i], @"^\/\/", "").TrimStart();
+                if (line.StartsWith("```"))
                 {
-                    string line = Regex.Replace(commentLines[i], @"^\/\/", "").TrimStart();
-                    if (line.StartsWith("```"))
-                    {
-                        codeBlock = !codeBlock;
-                        if (codeBlock)
-                        {
-                            curr = line;
-                        }
-                        else
-                        {
-                            curr = curr + "\n" + line;
-                            lines.Add(curr);
-                            curr = "";
-                        }
-                        continue;
-                    }
-                    if (line.StartsWith('|') || line.StartsWith('*'))
-                    {
-                        line = line + "\n";
-                    }
+                    codeBlock = !codeBlock;
                     if (codeBlock)
                     {
-                        curr = curr + "\n" + line;
+                        curr = line;
                     }
                     else
                     {
-                        if (line == "")
-                        {
-                            lines.Add(curr);
-                            curr = "";
-                        }
-                        else
-                        {
-                            curr = curr + " " + line;
-                        }
+                        curr = curr + "\n" + line;
+                        lines.Add(curr);
+                        curr = "";
                     }
+                    continue;
                 }
-                if (curr != "")
+                if (line.StartsWith('|') || line.StartsWith('*'))
                 {
-                    lines.Add(curr);
+                    line = line + "\n";
                 }
                 if (codeBlock)
                 {
-                    lines.Add("```");
+                    curr = curr + "\n" + line;
+                }
+                else
+                {
+                    if (line == "")
+                    {
+                        lines.Add(curr);
+                        curr = "";
+                    }
+                    else
+                    {
+                        curr = curr + " " + line;
+                    }
                 }
             }
-            if (docUrl != null && docUrl != "")
+            if (curr != "")
             {
-                lines.Add("---");
-                lines.Add($"[Wiki link for `{key}()`]({docUrl})");
+                lines.Add(curr);
             }
-            return new HoverData
+            if (codeBlock)
             {
-                Key = key,
-                Index = index,
-                ClassName = className,
-                Args = args,
-                Lines = lines.ToArray()
-            };
+                lines.Add("```");
+            }
+            return lines;
+        }
+
+        private HoverData? NewHoverText(string key, int index, string type, string className, string text, string? linkKey, string[] args)
+        {
+            List<string> lines = new List<string>();
+            if (type == "function")
+            {
+                string argStr = string.Join(", ", args);
+                string prefix = "function ";
+                if (className != "")
+                {
+                    prefix = $"// class {className}\nfunction ";
+                }
+                lines.Add($"```rascript\n{prefix}{key}({argStr})\n```");
+                List<string> comments = parseCommenText(text);
+                lines.AddRange(comments);
+                if (linkKey != null && linkKey != "")
+                {
+                    lines.Add("---");
+                    lines.Add($"[Wiki link for `{key}()`]({linkKey})");
+                }
+                return new HoverData
+                {
+                    Key = key,
+                    Index = index,
+                    Type = type,
+                    ClassName = className,
+                    Args = args,
+                    Lines = lines.ToArray()
+                };
+            }
+            if (type == "class")
+            {
+                lines.Add($"```rascript\nclass {key}\n```");
+                string argStr = string.Join(", ", args);
+                string prefix = "function ";
+                if (className != "")
+                {
+                    prefix = $"// class {className}\nfunction ";
+                }
+                lines.Add($"```rascript\n{prefix}{key}({argStr})\n```");
+                List<string> comments = parseCommenText(text);
+                lines.AddRange(comments);
+                return new HoverData
+                {
+                    Key = key,
+                    Index = index,
+                    Type = type,
+                    ClassName = className,
+                    Args = args,
+                    Lines = lines.ToArray()
+                };
+            }
+            if (type == "codeNote")
+            {
+
+            }
+            return null;
         }
 
         private string[] NewHoverData(string key, int index, string className, string text, string? docUrl, string[] args)
@@ -898,6 +960,7 @@ namespace RAScriptLanguageServer
         {
             bool fn = false;
             bool cls = false;
+            bool note = false;
             int startOffset = this.GetOffsetAt(location.Start);
             int endOffset = this.GetOffsetAt(location.End);
 
@@ -927,10 +990,28 @@ namespace RAScriptLanguageServer
                 }
                 offset--;
             }
+            if (!fn && !cls) // if we detect its not a fuction or class call, check if its a code note starting with 0x
+            {
+                if (startOffset + 1 <= this._text.Length && this._text[startOffset] == '0' && this._text[startOffset + 1] == 'x')
+                {
+                    note = true;
+                    int start = startOffset + 2;
+                    while (start <= this._text.Length && start <= endOffset)
+                    {
+                        if (!((this._text[start] >= '0' && this._text[start] <= '9') || (this._text[start] >= 'a' && this._text[start] <= 'f') || (this._text[start] >= 'A' && this._text[start] <= 'F')))
+                        {
+                            note = false;
+                            break;
+                        }
+                        start++;
+                    }
+                }
+            }
             return new WordType
             {
                 Function = fn,
                 Class = cls,
+                CodeNote = note
             };
         }
 
