@@ -1,7 +1,5 @@
 using System.Collections.Concurrent;
 using System.Text;
-using System.Threading.Tasks;
-using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using RASharp;
 using RASharp.Models;
 

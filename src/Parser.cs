@@ -3,10 +3,6 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using System.Text;
 using RASharp.Models;
-using OmniSharp.Extensions.LanguageServer.Protocol.Window;
-using System.Collections;
-using System.Security.AccessControl;
-using Microsoft.VisualBasic;
 
 namespace RAScriptLanguageServer
 {
@@ -15,11 +11,6 @@ namespace RAScriptLanguageServer
         public readonly ILanguageServerFacade _router;
         private readonly string _text;
         private readonly TextPositions textPositions;
-        // private readonly Dictionary<string, Position> functionLocations;
-        // private readonly Dictionary<string, string[]> comments;
-        // private readonly Dictionary<string, CompletionItemKind> keywordKinds;
-        // private readonly List<string> keywords;
-        // private readonly FunctionDefinition[] functionDefinitions;
         private readonly CommentBounds[] commentBounds;
         private readonly Dictionary<string, ClassScope> classes;
         private readonly Dictionary<string, List<ClassFunction>> functionDefinitions;
@@ -29,34 +20,6 @@ namespace RAScriptLanguageServer
         public readonly List<string> completionClasses;
         private int gameID;
         private GetCodeNotes? codeNotes;
-        private Dictionary<string, List<string>> codeNotesLines;
-
-        // public Parser(ILanguageServerFacade router, FunctionDefinitions functionDefinitions, string text)
-        // {
-        //     _router = router;
-        //     this._text = text;
-        //     this._textPositions = new TextPositions(_router, text);
-        //     this.functionLocations = new Dictionary<string, Position>();
-        //     this.comments = new Dictionary<string, string[]>();
-        //     this.keywordKinds = new Dictionary<string, CompletionItemKind>();
-        //     this.keywords = new List<string>();
-        //     this.functionDefinitions = functionDefinitions.functionDefinitions;
-        //     this.commentBounds = this.GetCommentBoundsList();
-        //     var data = this.GetClassData();
-        //     this.classes = this.GetClassData();
-        //     this.functionDefinitionsNew = new Dictionary<string, List<ClassFunction>>();
-        //     this.words = new Dictionary<string, List<HoverData>>();
-        //     this.completionFunctions = new List<string>();
-        //     this.completionVariables = new List<string>();
-        //     this.completionClasses = new List<string>();
-        //     this.gameID = 0; // game id's start at 1 on RA
-        //     this.Load();
-        //     Dictionary<string, CompletionItemKind>.KeyCollection keyColl = this.keywordKinds.Keys;
-        //     foreach (string k in keyColl)
-        //     {
-        //         this.keywords.Add(k);
-        //     }
-        // }
 
         public Parser(ILanguageServerFacade router, FunctionDefinitions builtinFunctionDefinitions, string text)
         {
@@ -67,7 +30,6 @@ namespace RAScriptLanguageServer
             this.classes = this.GetClassData();
             this.functionDefinitions = new Dictionary<string, List<ClassFunction>>();
             this.words = new Dictionary<string, List<HoverData>>();
-            this.codeNotesLines = new Dictionary<string, List<string>>();
             this.completionFunctions = new List<string>();
             this.completionVariables = new List<string>();
             this.completionClasses = new List<string>();
@@ -235,7 +197,6 @@ namespace RAScriptLanguageServer
                     if (hover != null)
                     {
                         List<HoverData>? data = this.GetHoverData(note.Address);
-                        this._router.Window.LogInfo($"Adding {note.Address}");
                         if (data != null)
                         {
                             data.Add(hover);
@@ -256,53 +217,6 @@ namespace RAScriptLanguageServer
         {
             return this.codeNotes;
         }
-
-        // private void Load()
-        // {
-        //     var classes = this.GetClassData();
-        //     for (int i = 0; i < this.functionDefinitions.Length; i++)
-        //     {
-        //         FunctionDefinition fn = this.functionDefinitions[i];
-        //         string comment = string.Join("\n", fn.CommentDoc);
-        //         this.comments[fn.Key] = NewHoverData(fn.Key, -1, "", comment, fn.URL, fn.Args);
-        //         this.keywordKinds[fn.Key] = CompletionItemKind.Function;
-        //     }
-        //     if (text != null && text != "")
-        //     {
-        //         foreach (Match ItemMatch in Regex.Matches(text, @"\/\/\s*#ID\s*=\s*(\d+)"))
-        //         {
-        //             string gameIDStr = ItemMatch.Groups.Values.ElementAt(1).ToString();
-        //             try
-        //             {
-        //                 int gameID = int.Parse(gameIDStr);
-        //                 if (gameID > 0)
-        //                 {
-        //                     this.gameID = gameID;
-        //                 }
-        //             }
-        //             catch (FormatException)
-        //             {
-        //                 this.gameID = 0; // reset the game id
-        //             }
-        //         }
-        //         foreach (Match ItemMatch in Regex.Matches(text, @"(\w+)\s*="))
-        //         {
-        //             string varName = ItemMatch.Groups.Values.ElementAt(1).ToString();
-        //             this.keywordKinds[varName] = CompletionItemKind.Variable;
-        //         }
-        //         foreach (Match ItemMatch in Regex.Matches(text, @"(\bfunction\b)[\t ]*([a-zA-Z][\w]*)[\t ]*\(([^\(\)]*)\)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
-        //         {
-        //             string className = DetectClass(ItemMatch.Index, classes);
-        //             string funcName = ItemMatch.Groups.Values.ElementAt(2).ToString();
-        //             Position pos = this._textPositions.GetPosition(ItemMatch.Index);
-        //             functionLocations[funcName] = pos;
-        //             this.keywordKinds[funcName] = CompletionItemKind.Function;
-        //             string[] args = ItemMatch.Groups.Values.ElementAt(3).ToString().Split(",").Select(s => s.Trim()).ToArray();
-        //             string comment = this.GetCommentText(pos);
-        //             this.comments[funcName] = NewHoverData(funcName, ItemMatch.Index, className, comment, null, args);
-        //         }
-        //     }
-        // }
 
         public bool InCommentBounds(int index)
         {
@@ -1042,38 +956,6 @@ namespace RAScriptLanguageServer
         {
             return char.IsLetterOrDigit(c) || c == '_';
         }
-
-        // public Position? GetLinkLocation(string word)
-        // {
-        //     if (this.functionLocations.ContainsKey(word))
-        //     {
-        //         return this.functionLocations[word];
-        //     }
-        //     return null;
-        // }
-
-        // public string[]? GetHoverText(string word)
-        // {
-        //     if (this.comments.ContainsKey(word))
-        //     {
-        //         return this.comments[word];
-        //     }
-        //     return null;
-        // }
-
-        // public string[] GetKeywords()
-        // {
-        //     return this.keywords.ToArray();
-        // }
-
-        // public CompletionItemKind? GetKeywordCompletionItemKind(string keyword)
-        // {
-        //     if (this.keywordKinds.ContainsKey(keyword))
-        //     {
-        //         return this.keywordKinds[keyword];
-        //     }
-        //     return null;
-        // }
 
         public List<HoverData>? GetHoverData(string className)
         {

@@ -2,8 +2,6 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
-using OmniSharp.Extensions.LanguageServer.Protocol.Window;
-using System.Text;
 
 namespace RAScriptLanguageServer
 {
@@ -65,7 +63,6 @@ namespace RAScriptLanguageServer
                     if (definitions != null)
                     {
                         WordType wordType = buffer.GetParser().GetWordType(word);
-                        this._router.Window.LogInfo($"In here222");
                         if (!wordType.Function && !wordType.Class && !wordType.CodeNote)
                         {
                             // only provide hover data for code notes, classes and functions
