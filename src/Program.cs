@@ -6,7 +6,11 @@ namespace RAScriptLanguageServer
 {
     public class Program
     {
-        public static async Task Main(string[] args)
+        public static Task Main(string[] args)
+        {
+            return MainAsync(args);
+        }
+        private static async Task MainAsync(string[] args)
         {
             var server = await LanguageServer.From(options =>
                 options
