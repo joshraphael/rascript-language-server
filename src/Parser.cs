@@ -131,7 +131,6 @@ namespace RAScriptLanguageServer
                 HoverData? hover = this.NewHoverText(className, classScope.Start, "class", "", comment, "", classScope.ConstructorArgs);
                 if (hover != null)
                 {
-                    this._router.Window.LogInfo($"HEREERE");
                     List<HoverData>? data = this.GetHoverData(className);
                     if (data != null)
                     {
@@ -147,7 +146,7 @@ namespace RAScriptLanguageServer
                 }
 
                 // Add completion data
-                    completionClasses.Add(className);
+                completionClasses.Add(className);
             }
             if (this._text != null && this._text != "")
             {
@@ -232,15 +231,23 @@ namespace RAScriptLanguageServer
             {
                 foreach (var note in this.codeNotes.CodeNotes)
                 {
-                    List<string> lines =
-                    [
-                        $"`{note.Address}`",
-                        "---",
-                        $"```txt\n{note.Note}\n```",
-                        "---",
-                        $"Author: [{note.User}](https://retroachievements.org/user/{note.User})",
-                    ];
-                    this.codeNotesLines[note.Address] = lines;
+                    HoverData? hover = NewHoverText(note.Address, -1, "codeNote", "", note.Note, note.User, []);
+                    if (hover != null)
+                    {
+                        List<HoverData>? data = this.GetHoverData(note.Address);
+                        this._router.Window.LogInfo($"Adding {note.Address}");
+                        if (data != null)
+                        {
+                            data.Add(hover);
+                        }
+                        else
+                        {
+                            this.words[note.Address] = new List<HoverData>
+                            {
+                                hover
+                            };
+                        }
+                    }
                 }
             }
         }
@@ -745,7 +752,23 @@ namespace RAScriptLanguageServer
             }
             if (type == "codeNote")
             {
-
+                lines =
+                [
+                    $"`{key}`",
+                    "---",
+                    $"```txt\n{text}\n```",
+                    "---",
+                    $"Author: [{linkKey}](https://retroachievements.org/user/{linkKey})",
+                ];
+                return new HoverData
+                {
+                    Key = key,
+                    Index = index,
+                    Type = type,
+                    ClassName = className,
+                    Args = args,
+                    Lines = lines.ToArray()
+                };
             }
             return null;
         }
