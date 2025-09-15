@@ -1,10 +1,7 @@
-using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
-using OmniSharp.Extensions.LanguageServer.Protocol.Window;
-using Range = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 
 namespace RAScriptLanguageServer
 {
@@ -37,13 +34,31 @@ namespace RAScriptLanguageServer
             List<CompletionItem> items = new List<CompletionItem>();
             if (parser != null)
             {
-                foreach (var k in parser.GetKeywords())
+                HashSet<string> functionSet = [.. parser.completionFunctions];
+                foreach (string fnName in functionSet)
                 {
-                    CompletionItemKind kind = parser.GetKeywordCompletionItemKind(k) ?? CompletionItemKind.Text;
                     items.Add(new CompletionItem()
                     {
-                        Label = k,
-                        Kind = kind,
+                        Label = fnName,
+                        Kind = CompletionItemKind.Function,
+                    });
+                }
+                HashSet<string> variableSet = [.. parser.completionVariables];
+                foreach (string varName in variableSet)
+                {
+                    items.Add(new CompletionItem()
+                    {
+                        Label = varName,
+                        Kind = CompletionItemKind.Variable,
+                    });
+                }
+                HashSet<string> classSet = [.. parser.completionClasses];
+                foreach (string className in classSet)
+                {
+                    items.Add(new CompletionItem()
+                    {
+                        Label = className,
+                        Kind = CompletionItemKind.Class,
                     });
                 }
             }

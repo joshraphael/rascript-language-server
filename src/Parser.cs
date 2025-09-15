@@ -3,39 +3,186 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using System.Text;
 using RASharp.Models;
-using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 
 namespace RAScriptLanguageServer
 {
     public class Parser
     {
         public readonly ILanguageServerFacade _router;
-        private readonly string text;
+        private readonly string _text;
         private readonly TextPositions textPositions;
-        private readonly Dictionary<string, Position> functionLocations;
-        private readonly Dictionary<string, string[]> comments;
-        private readonly Dictionary<string, CompletionItemKind> keywordKinds;
-        private readonly List<string> keywords;
-        private readonly FunctionDefinition[] functionDefinitions;
+        private readonly CommentBounds[] commentBounds;
+        private readonly Dictionary<string, ClassScope> classes;
+        private readonly Dictionary<string, List<ClassFunction>> functionDefinitions;
+        private readonly Dictionary<string, List<HoverData>> words;
+        public readonly List<string> completionFunctions;
+        public readonly List<string> completionVariables;
+        public readonly List<string> completionClasses;
         private int gameID;
         private GetCodeNotes? codeNotes;
 
-        public Parser(ILanguageServerFacade router, FunctionDefinitions functionDefinitions, string text)
+        public Parser(ILanguageServerFacade router, FunctionDefinitions builtinFunctionDefinitions, string text)
         {
             _router = router;
-            this.text = text;
+            this._text = text;
             this.textPositions = new TextPositions(_router, text);
-            this.functionLocations = new Dictionary<string, Position>();
-            this.comments = new Dictionary<string, string[]>();
-            this.keywordKinds = new Dictionary<string, CompletionItemKind>();
-            this.keywords = new List<string>();
-            this.functionDefinitions = functionDefinitions.functionDefinitions;
+            this.commentBounds = this.GetCommentBoundsList();
+            this.classes = this.GetClassData();
+            this.functionDefinitions = new Dictionary<string, List<ClassFunction>>();
+            this.words = new Dictionary<string, List<HoverData>>();
+            this.completionFunctions = new List<string>();
+            this.completionVariables = new List<string>();
+            this.completionClasses = new List<string>();
             this.gameID = 0; // game id's start at 1 on RA
-            this.Load();
-            Dictionary<string, CompletionItemKind>.KeyCollection keyColl = this.keywordKinds.Keys;
-            foreach (string k in keyColl)
+
+            // find the game id in the document
+            foreach (Match ItemMatch in Regex.Matches(text, @"\/\/\s*#ID\s*=\s*(\d+)"))
             {
-                this.keywords.Add(k);
+                string gameIDStr = ItemMatch.Groups.Values.ElementAt(1).ToString();
+                try
+                {
+                    int gameID = int.Parse(gameIDStr);
+                    if (gameID > 0)
+                    {
+                        this.gameID = gameID;
+                    }
+                }
+                catch (FormatException)
+                {
+                    this.gameID = 0; // reset the game id
+                }
+            }
+
+            // Parse each built in function in the document
+            for (int i = 0; i < builtinFunctionDefinitions.functionDefinitions.Length; i++)
+            {
+                FunctionDefinition fn = builtinFunctionDefinitions.functionDefinitions[i];
+
+                // Add hover data
+                string comment = string.Join("\n", fn.CommentDoc);
+                HoverData? hover = this.NewHoverText(fn.Key, -1, "function", "", comment, fn.URL, fn.Args);
+                if (hover != null)
+                {
+                    List<HoverData>? data = this.GetHoverData(fn.Key);
+                    if (data != null)
+                    {
+                        data.Add(hover);
+                    }
+                    else
+                    {
+                        this.words[fn.Key] = new List<HoverData>
+                        {
+                            hover
+                        };
+                    }
+                }
+
+                // Add completion data
+                completionFunctions.Add(fn.Key);
+            }
+
+            // Parse each class in the document
+            foreach (var entry in this.classes)
+            {
+                string className = entry.Key;
+                ClassScope classScope = entry.Value;
+
+                // Add hover info
+                Position pos = this.textPositions.GetPosition(classScope.Start);
+                string comment = this.GetCommentText(pos);
+                HoverData? hover = this.NewHoverText(className, classScope.Start, "class", "", comment, "", classScope.ConstructorArgs);
+                if (hover != null)
+                {
+                    List<HoverData>? data = this.GetHoverData(className);
+                    if (data != null)
+                    {
+                        data.Add(hover);
+                    }
+                    else
+                    {
+                        this.words[className] = new List<HoverData>
+                    {
+                        hover
+                    };
+                    }
+                }
+
+                // Add completion data
+                completionClasses.Add(className);
+            }
+            if (this._text != null && this._text != "")
+            {
+                // Parse each function in the document
+                foreach (Match ItemMatch in Regex.Matches(text, @"(\bfunction\b)[\t ]*([a-zA-Z][\w]*)[\t ]*\(([^\(\)]*)\)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
+                {
+                    // dont parse if its in a comment
+                    if (this.InCommentBounds(ItemMatch.Index))
+                    {
+                        continue;
+                    }
+                    string className = this.DetectClass(ItemMatch.Index);
+                    Position pos = this.textPositions.GetPosition(ItemMatch.Index);
+                    string comment = this.GetCommentText(pos);
+                    string funcName = ItemMatch.Groups.Values.ElementAt(2).ToString();
+                    string[] args = ItemMatch.Groups.Values.ElementAt(3).ToString().Split(",").Select(s => s.Trim()).ToArray();
+
+                    // add definition info
+                    ClassFunction definition = new ClassFunction
+                    {
+                        ClassName = className,
+                        Name = funcName,
+                        Pos = pos,
+                        Args = args
+                    };
+                    List<ClassFunction>? data = this.GetClassFunctionDefinitions(funcName);
+                    if (data != null)
+                    {
+                        data.Add(definition);
+                    }
+                    else
+                    {
+                        this.functionDefinitions[funcName] = new List<ClassFunction>
+                        {
+                            definition
+                        };
+                    }
+
+                    // add hover info
+                    HoverData? hover = this.NewHoverText(funcName, ItemMatch.Index, "function", className, comment, "", args);
+                    if (hover != null)
+                    {
+                        List<HoverData>? hoverData = this.GetHoverData(funcName);
+                        if (hoverData != null)
+                        {
+                            hoverData.Add(hover);
+                        }
+                        else
+                        {
+                            this.words[funcName] = new List<HoverData>
+                        {
+                            hover
+                        };
+                        }
+                    }
+
+                    // add completion info
+                        completionFunctions.Add(funcName);
+                }
+
+                // Parse each variable in the document
+                foreach (Match ItemMatch in Regex.Matches(text, @"([a-zA-Z_][\w]*)[\t ]*="))
+                {
+                    // dont parse if its in a comment
+                    if (this.InCommentBounds(ItemMatch.Index))
+                    {
+                        continue;
+                    }
+
+                    string varName = ItemMatch.Groups.Values.ElementAt(1).ToString();
+
+                    // add completion info
+                    completionVariables.Add(varName);
+                }
             }
         }
 
@@ -46,13 +193,22 @@ namespace RAScriptLanguageServer
             {
                 foreach (var note in this.codeNotes.CodeNotes)
                 {
-                    this.comments[note.Address] = [
-                        $"`{note.Address}`",
-                        "---",
-                        $"```txt\n{note.Note}\n```",
-                        "---",
-                        $"Author: [{note.User}](https://retroachievements.org/user/{note.User})",
-                    ];
+                    HoverData? hover = NewHoverText(note.Address, -1, "codeNote", "", note.Note, note.User, []);
+                    if (hover != null)
+                    {
+                        List<HoverData>? data = this.GetHoverData(note.Address);
+                        if (data != null)
+                        {
+                            data.Add(hover);
+                        }
+                        else
+                        {
+                            this.words[note.Address] = new List<HoverData>
+                            {
+                                hover
+                            };
+                        }
+                    }
                 }
             }
         }
@@ -62,163 +218,476 @@ namespace RAScriptLanguageServer
             return this.codeNotes;
         }
 
-        private void Load()
+        public bool InCommentBounds(int index)
         {
-            for (int i = 0; i < this.functionDefinitions.Length; i++)
+            for (int i = 0; i < this.commentBounds.Length; i++)
             {
-                FunctionDefinition fn = this.functionDefinitions[i];
-                string comment = string.Join("\n", fn.CommentDoc);
-                this.comments[fn.Key] = NewHoverData(fn.Key, comment, fn.URL, fn.Args);
-                this.keywordKinds[fn.Key] = CompletionItemKind.Function;
+                CommentBounds bound = this.commentBounds[i];
+                if (index >= bound.Start && index <= bound.End)
+                {
+                    return true;
+                }
             }
-            if (text != null && text != "")
+            return false;
+        }
+
+        public string DetectClass(int funcPos) {
+            foreach (var data in this.classes)
             {
-                foreach (Match ItemMatch in Regex.Matches(text, @"\/\/\s*#ID\s*=\s*(\d+)"))
+                if (funcPos >= data.Value.Start && funcPos <= data.Value.End)
                 {
-                    string gameIDStr = ItemMatch.Groups.Values.ElementAt(1).ToString();
-                    try
+                    return data.Key;
+                }
+            }
+            return "";
+        }
+
+        private Dictionary<string, ClassScope> GetClassData()
+        {
+            Dictionary<string, ClassScope> classes = new Dictionary<string, ClassScope>();
+            foreach (Match ItemMatch in Regex.Matches(this._text, @"(\bclass\b)[\t ]*([a-zA-Z_][\w]*)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
+            {
+                // dont parse if its in a comment
+                if (this.InCommentBounds(ItemMatch.Index))
+                {
+                    continue;
+                }
+                int postClassNameInd = ItemMatch.Index + ItemMatch.Groups.Values.ElementAt(0).Length;
+                int ind = postClassNameInd;
+                Stack<int> stack = new Stack<int>();
+                string strippedText = ""; // this is used to determine the implicit arguments to a class constructor
+                while (ind < this._text.Length)
+                {
+                    // anything other than white space or open curly brace is an error and we just wont parse this class
+                    if (this._text[ind] != ' ' && this._text[ind] != '\n' && this._text[ind] != '\r' && this._text[ind] != '\t' && this._text[ind] != '{')
                     {
-                        int gameID = int.Parse(gameIDStr);
-                        if (gameID > 0)
+                        break;
+                    }
+                    if (this._text[ind] == '{')
+                    {
+                        // get the position of the opening curly brace
+                        stack.Push(ind);
+                        break;
+                    }
+                    ind++;
+                }
+                if (stack.Count == 1)
+                {
+                    // if we have a curly brace scope, start parsing to find the end of the scope
+                    ind = stack.Peek() + 1; // next char after our first open curly brace
+                    while (ind < this._text.Length)
+                    {
+                        if (this._text[ind] == '}')
                         {
-                            this.gameID = gameID;
+                            stack.Pop();
                         }
-                    }
-                    catch (FormatException)
-                    {
-                        this.gameID = 0; // reset the game id
-                    }
-                }
-                foreach (Match ItemMatch in Regex.Matches(text, @"(\w+)\s*="))
-                {
-                    string varName = ItemMatch.Groups.Values.ElementAt(1).ToString();
-                    this.keywordKinds[varName] = CompletionItemKind.Variable;
-                }
-                foreach (Match ItemMatch in Regex.Matches(text, @"(\bfunction\b)\s*(\w+)\s*\(([^\(\)]*)\)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
-                {
-                    string funcName = ItemMatch.Groups.Values.ElementAt(2).ToString();
-                    Position pos = this.textPositions.GetPosition(ItemMatch.Index);
-                    functionLocations[funcName] = pos;
-                    this.keywordKinds[funcName] = CompletionItemKind.Function;
-                    string comment = "";
-                    string untrimmedComment = "";
-                    bool blockCommentStarStyle = true;
-                    if (pos.Line > 0)
-                    {
-                        int offset = 1;
-                        bool inBlock = false;
-                        while (pos.Line - offset >= 0)
+                        else if (this._text[ind] == '{')
                         {
-                            int lineNum = pos.Line - offset;
-                            string? line = this.textPositions.GetLineAt(lineNum);
-                            if (line != null)
+                            stack.Push(ind);
+                        }
+                        else
+                        {
+                            if (stack.Count == 1)
                             {
-                                line = line.TrimStart();
-                                if (offset == 1)
-                                {
-                                    bool isBlock = Regex.IsMatch(line, @"^.*\*\/$");
-                                    if (isBlock)
-                                    {
-                                        inBlock = true;
-                                    }
-                                }
-                                if (inBlock) // Block comment
-                                {
-                                    bool endBlock = Regex.IsMatch(line, @"^.*\/\*.*$");
-                                    if (endBlock)
-                                    {
-                                        // Trim start token
-                                        string[] trimmedLine = Regex.Split(line, @"\/\*(.*)", RegexOptions.Singleline).Skip(1).ToArray();
-                                        string newLine = string.Join("", trimmedLine).TrimStart();
-
-                                        // Trim end token
-                                        trimmedLine = newLine.Split("*/"); // use whats after the star token
-                                        if (trimmedLine.Length > 2)
-                                        {
-                                            trimmedLine = trimmedLine[..^1]; // remove last element
-                                        }
-                                        newLine = string.Join("", trimmedLine).TrimStart();
-                                        if (blockCommentStarStyle)
-                                        {
-                                            bool starComment = Regex.IsMatch(newLine, @"^\*.*");
-                                            if (!starComment)
-                                            {
-                                                blockCommentStarStyle = false;
-                                            }
-                                        }
-                                        untrimmedComment = "//" + newLine + "\n" + untrimmedComment; // keep an untrimmed version of the comment in case the entire block is prefixed with stars
-
-                                        // Trim first '*' token (in case they comment that way)
-                                        trimmedLine = Regex.Split(newLine, @"^\*(.*)", RegexOptions.Singleline).ToArray();
-                                        if (trimmedLine.Length > 2)
-                                        {
-                                            trimmedLine = trimmedLine[1..]; // remove first element
-                                        }
-                                        newLine = string.Join("", trimmedLine).TrimStart();
-                                        comment = "//" + newLine + "\n" + comment;
-                                        break;
-                                    }
-                                    else // at end of comment block
-                                    {
-                                        // Trim end token (guaranteed to not have text after end token if the user wants comments to appear in hover box)
-                                        string[] trimmedLine = line.Split("*/");
-                                        if (trimmedLine.Length > 2)
-                                        {
-                                            trimmedLine = trimmedLine[..^1]; // remove last element
-                                        }
-                                        string newLine = string.Join("", trimmedLine).TrimStart();
-
-                                        if (blockCommentStarStyle)
-                                        {
-                                            bool starComment = Regex.IsMatch(newLine, @"^\*.*");
-                                            if (!starComment)
-                                            {
-                                                blockCommentStarStyle = false;
-                                            }
-                                        }
-                                        untrimmedComment = "//" + newLine + "\n" + untrimmedComment; // keep an untrimmed version of the comment in case the entire block is prefixed with stars
-
-                                        // Trim first '*' token (in case they comment that way)
-                                        trimmedLine = Regex.Split(newLine, @"^\*(.*)", RegexOptions.Singleline).ToArray();
-                                        if (trimmedLine.Length > 2)
-                                        {
-                                            trimmedLine = trimmedLine[1..]; // remove first element
-                                        }
-                                        newLine = string.Join("", trimmedLine).TrimStart();
-                                        comment = "//" + newLine + "\n" + comment;
-                                    }
-                                }
-                                else // Single line comment
-                                {
-                                    bool isComment = Regex.IsMatch(line, @"^\/\/.*$");
-                                    if (isComment)
-                                    {
-                                        comment = line + "\n" + comment;
-                                    }
-                                    else
-                                    {
-                                        break;
-                                    }
-                                }
+                                // if the code is at the first level of the class (not in a function) append it to our stripped class
+                                strippedText = strippedText + this._text[ind];
                             }
-                            offset = offset + 1;
                         }
+                        if (stack.Count == 0)
+                        {
+                            // we have found our end position of the scope, break out
+                            break;
+                        }
+                        ind++;
                     }
-                    // do something
-                    string[] args = ItemMatch.Groups.Values.ElementAt(3).ToString().Split(",").Select(s => s.Trim()).ToArray();
-                    if (blockCommentStarStyle)
+                    List<string> args = new List<string>();
+                    foreach (Match ItemMatch2 in Regex.Matches(strippedText, @"([a-zA-Z_][\w]*)[\t ]*="))
                     {
-                        this.comments[funcName] = NewHoverData(funcName, comment, null, args);
+                        args.Add(ItemMatch2.Groups.Values.ElementAt(1).ToString());
+                    }
+                    ClassScope scope = new ClassScope()
+                    {
+                        Start = ItemMatch.Index,
+                        End = ind,
+                        Functions = new Dictionary<string, FunctionDefinition>(),
+                        ConstructorArgs = args.ToArray()
+                    };
+                    classes.Add(ItemMatch.Groups.Values.ElementAt(2).ToString(), scope);
+                }
+            }
+            return classes;
+        }
+
+        public int CountArgsAt(int offset)
+        {
+            int count = 0;
+            offset++; // move one over, the end offset should be at the character at the end of the function name
+            if (this._text[offset] == '(')
+            {
+                offset++;
+                while (offset < this._text.Length)
+                {
+                    if (this._text[offset] == ')')
+                    {
+                        break;
+                    }
+                    if (count == 0)
+                    {
+                        count = 1;
                     }
                     else
                     {
-                        this.comments[funcName] = NewHoverData(funcName, untrimmedComment, null, args);
+                        if (this._text[offset] == ',')
+                        {
+                            count++;
+                        }
+                    }
+                    offset++;
+                }
+            }
+            return count;
+        }
+
+        private CommentBounds[] GetCommentBoundsList()
+        {
+            List<CommentBounds> commentBounds = new List<CommentBounds>();
+            bool inComment = false;
+            int tempStart = 0;
+            if (this._text.Length < 2)
+            {
+                return commentBounds.ToArray();
+            }
+            for (int i = 1; i < this._text.Length; i++)
+            {
+                if (inComment)
+                {
+                    if (this._text[i] == '\n' || this._text[i] == '\r')
+                    {
+                        inComment = false;
+                        CommentBounds commentBound = new CommentBounds()
+                        {
+                            Start = tempStart,
+                            End = i - 1,
+                            Type = "Line",
+                            Raw = this._text[tempStart..i]
+                        };
+                        commentBounds.Add(commentBound);
+                    }
+                }
+                else
+                {
+                    if (this._text[i - 1] == '/' && this._text[i] == '/')
+                    {
+                        inComment = true;
+                        tempStart = i - 1;
+                    }
+                }
+                if (i == this._text.Length - 1 && inComment)
+                {
+                    inComment = false;
+                    CommentBounds commentBound = new CommentBounds()
+                    {
+                        Start = tempStart,
+                        End = i,
+                        Type = "Line",
+                        Raw = this._text[tempStart..]
+                    };
+                    commentBounds.Add(commentBound);
+                }
+            }
+            // parse different comment types seperately incase they are mixed together,
+            // the bounds between these two could overlap technically
+
+            // get bounds of block comments
+            inComment = false;
+            tempStart = 0;
+            for (int i = 1; i < this._text.Length; i++)
+            {
+                if (inComment)
+                {
+                    if (this._text[i - 1] == '*' && this._text[i] == '/') // end
+                    {
+                        inComment = false;
+                        CommentBounds commentBound = new CommentBounds
+                        {
+                            Start = tempStart,
+                            End = i - 1,
+                            Type = "Block",
+                            Raw = this._text[tempStart..i]
+                        };
+                        commentBounds.Add(commentBound);
+                    }
+                }
+                else
+                {
+                    if (this._text[i - 1] == '/' && this._text[i] == '*') // start
+                    {
+                        inComment = true;
+                        tempStart = i - 1;
+                    }
+                }
+                if (i == this._text.Length - 1 && inComment)
+                {
+                    inComment = false;
+                    CommentBounds commentBound = new CommentBounds()
+                    {
+                        Start = tempStart,
+                        End = i,
+                        Type = "Block",
+                        Raw = this._text[tempStart..]
+                    };
+                    commentBounds.Add(commentBound);
+                }
+            }
+            return commentBounds.ToArray();
+        }
+
+        private string GetCommentText(Position pos)
+        {
+            string comment = "";
+            string untrimmedComment = "";
+            bool blockCommentStarStyle = true;
+            if (pos.Line > 0)
+            {
+                int offset = 1;
+                bool inBlock = false;
+                while (pos.Line - offset >= 0)
+                {
+                    int lineNum = pos.Line - offset;
+                    string? line = this.textPositions.GetLineAt(lineNum);
+                    if (line != null)
+                    {
+                        line = line.TrimStart();
+                        if (offset == 1)
+                        {
+                            bool isBlock = Regex.IsMatch(line, @"^.*\*\/$");
+                            if (isBlock)
+                            {
+                                inBlock = true;
+                            }
+                        }
+                        if (inBlock) // Block comment
+                        {
+                            bool endBlock = Regex.IsMatch(line, @"^.*\/\*.*$");
+                            if (endBlock)
+                            {
+                                // Trim start token
+                                string[] trimmedLine = Regex.Split(line, @"\/\*(.*)", RegexOptions.Singleline).Skip(1).ToArray();
+                                string newLine = string.Join("", trimmedLine).TrimStart();
+
+                                // Trim end token
+                                trimmedLine = newLine.Split("*/"); // use whats after the star token
+                                if (trimmedLine.Length > 2)
+                                {
+                                    trimmedLine = trimmedLine[..^1]; // remove last element
+                                }
+                                newLine = string.Join("", trimmedLine).TrimStart();
+                                if (blockCommentStarStyle)
+                                {
+                                    bool starComment = Regex.IsMatch(newLine, @"^\*.*");
+                                    if (!starComment)
+                                    {
+                                        blockCommentStarStyle = false;
+                                    }
+                                }
+                                untrimmedComment = "//" + newLine + "\n" + untrimmedComment; // keep an untrimmed version of the comment in case the entire block is prefixed with stars
+
+                                // Trim first '*' token (in case they comment that way)
+                                trimmedLine = Regex.Split(newLine, @"^\*(.*)", RegexOptions.Singleline).ToArray();
+                                if (trimmedLine.Length > 2)
+                                {
+                                    trimmedLine = trimmedLine[1..]; // remove first element
+                                }
+                                newLine = string.Join("", trimmedLine).TrimStart();
+                                comment = "//" + newLine + "\n" + comment;
+                                break;
+                            }
+                            else // at end of comment block
+                            {
+                                // Trim end token (guaranteed to not have text after end token if the user wants comments to appear in hover box)
+                                string[] trimmedLine = line.Split("*/");
+                                if (trimmedLine.Length > 2)
+                                {
+                                    trimmedLine = trimmedLine[..^1]; // remove last element
+                                }
+                                string newLine = string.Join("", trimmedLine).TrimStart();
+
+                                if (blockCommentStarStyle)
+                                {
+                                    bool starComment = Regex.IsMatch(newLine, @"^\*.*");
+                                    if (!starComment)
+                                    {
+                                        blockCommentStarStyle = false;
+                                    }
+                                }
+                                untrimmedComment = "//" + newLine + "\n" + untrimmedComment; // keep an untrimmed version of the comment in case the entire block is prefixed with stars
+
+                                // Trim first '*' token (in case they comment that way)
+                                trimmedLine = Regex.Split(newLine, @"^\*(.*)", RegexOptions.Singleline).ToArray();
+                                if (trimmedLine.Length > 2)
+                                {
+                                    trimmedLine = trimmedLine[1..]; // remove first element
+                                }
+                                newLine = string.Join("", trimmedLine).TrimStart();
+                                comment = "//" + newLine + "\n" + comment;
+                            }
+                        }
+                        else // Single line comment
+                        {
+                            bool isComment = Regex.IsMatch(line, @"^\/\/.*$");
+                            if (isComment)
+                            {
+                                comment = line + "\n" + comment;
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                    }
+                    offset = offset + 1;
+                }
+            }
+            string finalComment = untrimmedComment;
+            if (blockCommentStarStyle)
+            {
+                finalComment = comment;
+            }
+            return finalComment;
+        }
+
+        private List<string> parseCommenText(string comment)
+        {
+            List<string> lines = new List<string>();
+            string[] commentLines = Regex.Split(comment, @"\r?\n");
+            lines.Add("---");
+            string curr = "";
+            bool codeBlock = false;
+            for (int i = 0; i < commentLines.Length; i++)
+            {
+                string line = Regex.Replace(commentLines[i], @"^\/\/", "").TrimStart();
+                if (line.StartsWith("```"))
+                {
+                    codeBlock = !codeBlock;
+                    if (codeBlock)
+                    {
+                        curr = line;
+                    }
+                    else
+                    {
+                        curr = curr + "\n" + line;
+                        lines.Add(curr);
+                        curr = "";
+                    }
+                    continue;
+                }
+                if (line.StartsWith('|') || line.StartsWith('*'))
+                {
+                    line = line + "\n";
+                }
+                if (codeBlock)
+                {
+                    curr = curr + "\n" + line;
+                }
+                else
+                {
+                    if (line == "")
+                    {
+                        lines.Add(curr);
+                        curr = "";
+                    }
+                    else
+                    {
+                        curr = curr + " " + line;
                     }
                 }
             }
+            if (curr != "")
+            {
+                lines.Add(curr);
+            }
+            if (codeBlock)
+            {
+                lines.Add("```");
+            }
+            return lines;
         }
 
-        private string[] NewHoverData(string key, string text, string? docUrl, string[] args)
+        private HoverData? NewHoverText(string key, int index, string type, string className, string text, string? linkKey, string[] args)
+        {
+            List<string> lines = new List<string>();
+            if (type == "function")
+            {
+                string argStr = string.Join(", ", args);
+                string prefix = "function ";
+                if (className != "")
+                {
+                    prefix = $"// class {className}\nfunction ";
+                }
+                lines.Add($"```rascript\n{prefix}{key}({argStr})\n```");
+                List<string> comments = parseCommenText(text);
+                lines.AddRange(comments);
+                if (linkKey != null && linkKey != "")
+                {
+                    lines.Add("---");
+                    lines.Add($"[Wiki link for `{key}()`]({linkKey})");
+                }
+                return new HoverData
+                {
+                    Key = key,
+                    Index = index,
+                    Type = type,
+                    ClassName = className,
+                    Args = args,
+                    Lines = lines.ToArray()
+                };
+            }
+            if (type == "class")
+            {
+                lines.Add($"```rascript\nclass {key}\n```");
+                string argStr = string.Join(", ", args);
+                string prefix = "function ";
+                if (className != "")
+                {
+                    prefix = $"// class {className}\nfunction ";
+                }
+                lines.Add($"```rascript\n{prefix}{key}({argStr})\n```");
+                List<string> comments = parseCommenText(text);
+                lines.AddRange(comments);
+                return new HoverData
+                {
+                    Key = key,
+                    Index = index,
+                    Type = type,
+                    ClassName = className,
+                    Args = args,
+                    Lines = lines.ToArray()
+                };
+            }
+            if (type == "codeNote")
+            {
+                lines =
+                [
+                    $"`{key}`",
+                    "---",
+                    $"```txt\n{text}\n```",
+                    "---",
+                    $"Author: [{linkKey}](https://retroachievements.org/user/{linkKey})",
+                ];
+                return new HoverData
+                {
+                    Key = key,
+                    Index = index,
+                    Type = type,
+                    ClassName = className,
+                    Args = args,
+                    Lines = lines.ToArray()
+                };
+            }
+            return null;
+        }
+
+        private string[] NewHoverData(string key, int index, string className, string text, string? docUrl, string[] args)
         {
             string argStr = string.Join(", ", args);
             string[] commentLines = Regex.Split(text, @"\r?\n");
@@ -285,17 +754,40 @@ namespace RAScriptLanguageServer
             return lines.ToArray();
         }
 
-        public string GetWordAtPosition(string txt, long lineNum, long character)
+        public Func<ClassFunction, bool> ClassFilter(bool global, bool usingThis, string className)
         {
-            var lines = txt.Split('\n');
-            var line = lines[lineNum];
-            var index = Convert.ToInt32(character);
+            return (el) =>
+            {
+                if (global)
+                {
+                    return el.ClassName == "";
+                }
+                else if (usingThis)
+                {
+                    return el.ClassName == className;
+                }
+                return el.ClassName != "";
+            };
+        }
+
+        public WordLocation GetWordAtPosition(Position pos)
+        {
+            var lines = this._text.Split('\n');
+            var line = lines[pos.Line];
+            var index = Convert.ToInt32(pos.Character);
+            var leftIndex = Convert.ToInt32(pos.Character);
+            var rightIndex = Convert.ToInt32(pos.Character);
 
             if (index >= line.Length)
             {
-                return "";
+                return new WordLocation
+                {
+                    Word = "",
+                    Start = pos,
+                    End = pos
+                };
             }
-            var initialChar = line[Convert.ToInt32(character)];
+            var initialChar = line[Convert.ToInt32(pos.Character)];
             StringBuilder word = new StringBuilder();
             if (IsWordLetter(initialChar))
             {
@@ -309,6 +801,7 @@ namespace RAScriptLanguageServer
                         if (IsWordLetter(line[i]))
                         {
                             word.Insert(0, line[i]); // Prepend
+                            leftIndex = i;
                             continue;
                         }
                         break;
@@ -321,13 +814,142 @@ namespace RAScriptLanguageServer
                         if (IsWordLetter(line[i]))
                         {
                             word.Append(line[i]);
+                            rightIndex = i;
                             continue;
                         }
                         break;
                     }
                 }
             }
-            return word.ToString();
+            return new WordLocation
+            {
+                Word = word.ToString(),
+                Start = new Position
+                {
+                    Line = pos.Line,
+                    Character = leftIndex,
+                },
+                End = new Position
+                {
+                    Line = pos.Line,
+                    Character = rightIndex,
+                },
+            };
+        }
+
+        public int GetOffsetAt(Position pos)
+        {
+            var lines = this._text.Split('\n');
+            var line = lines[pos.Line];
+            var index = Convert.ToInt32(pos.Character);
+            var leftInd = Convert.ToInt32(pos.Character);
+            var rightInd = Convert.ToInt32(pos.Character);
+
+            if (index >= line.Length)
+            {
+                return -1;
+            }
+            var realLines = new List<string>();
+            for (int i = 0; i < pos.Line; i++)
+            {
+                realLines.Add(lines[i]);
+            }
+            var partialString = line.Substring(0, index);
+            realLines.Add(partialString);
+            return String.Join("\n", realLines.ToArray()).Length;
+        }
+
+        public WordScope GetScope(Position pos)
+        {
+            bool global = true;
+            bool usingThis = false;
+            int offset = this.GetOffsetAt(pos) - 1;
+
+            while (global && offset >= 0)
+            {
+                if (this._text[offset] != ' ' && this._text[offset] != '\t' && this._text[offset] != '.')
+                {
+                    break;
+                }
+                if (this._text[offset] == '.')
+                {
+                    // in here means the previous non whitespace character next to the word hovered over is a dot which is the class attribute accessor operator
+                    global = false;
+                    if (offset - 4 >= 0)
+                    {
+                        if (this._text[offset - 4] == 't' && this._text[offset - 3] == 'h' && this._text[offset - 2] == 'i' && this._text[offset - 1] == 's')
+                        {
+                            usingThis = true;
+                        }
+                    }
+                    break;
+                }
+                offset--;
+            }
+            return new WordScope
+            {
+                Global = global,
+                UsingThis = usingThis
+            };
+        }
+
+        public WordType GetWordType(WordLocation location)
+        {
+            bool fn = false;
+            bool cls = false;
+            bool note = false;
+            int startOffset = this.GetOffsetAt(location.Start);
+            int endOffset = this.GetOffsetAt(location.End);
+
+            // check for function
+            if (endOffset+1 <= this._text.Length && this._text[endOffset+1] == '(')
+            {
+                fn = true;
+            }
+            int offset = startOffset - 1;
+            while (offset >= 0)
+            {
+                // start searching for the previous word to be 'class'
+                if (this._text[offset] != ' ' && this._text[offset] != '\t' && this._text[offset] != 's')
+                {
+                    break;
+                }
+                if (this._text[offset] == 's')
+                {
+                    if (offset - 4 >= 0)
+                    {
+                        if (this._text[offset - 4] == 'c' && this._text[offset - 3] == 'l' && this._text[offset - 2] == 'a' && this._text[offset - 1] == 's')
+                        {
+                            cls = true;
+                        }
+                    }
+                    break;
+                }
+                offset--;
+            }
+            if (!fn && !cls) // if we detect its not a fuction or class call, check if its a code note starting with 0x
+            {
+                if (startOffset + 1 <= this._text.Length && this._text[startOffset] == '0' && this._text[startOffset + 1] == 'x')
+                {
+                    note = true;
+                    int start = startOffset + 2;
+                    while (start <= this._text.Length && start <= endOffset)
+                    {
+                        if (!((this._text[start] >= '0' && this._text[start] <= '9') || (this._text[start] >= 'a' && this._text[start] <= 'f') || (this._text[start] >= 'A' && this._text[start] <= 'F')))
+                        {
+                            note = false;
+                            break;
+                        }
+                        start++;
+                    }
+                }
+            }
+            return new WordType
+            {
+                Function = fn,
+                Class = cls,
+                CodeNote = note
+            };
         }
 
         public static bool IsWordLetter(char c)
@@ -335,34 +957,20 @@ namespace RAScriptLanguageServer
             return char.IsLetterOrDigit(c) || c == '_';
         }
 
-        public Position? GetLinkLocation(string word)
+        public List<HoverData>? GetHoverData(string className)
         {
-            if (this.functionLocations.ContainsKey(word))
+            if (this.words.ContainsKey(className))
             {
-                return this.functionLocations[word];
+                return this.words[className];
             }
             return null;
         }
 
-        public string[]? GetHoverText(string word)
+        public List<ClassFunction>? GetClassFunctionDefinitions(string className)
         {
-            if (this.comments.ContainsKey(word))
+            if (this.functionDefinitions.ContainsKey(className))
             {
-                return this.comments[word];
-            }
-            return null;
-        }
-
-        public string[] GetKeywords()
-        {
-            return this.keywords.ToArray();
-        }
-
-        public CompletionItemKind? GetKeywordCompletionItemKind(string keyword)
-        {
-            if (this.keywordKinds.ContainsKey(keyword))
-            {
-                return this.keywordKinds[keyword];
+                return this.functionDefinitions[className];
             }
             return null;
         }

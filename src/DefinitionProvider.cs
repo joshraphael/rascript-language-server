@@ -1,9 +1,7 @@
-using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
-using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using Range = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 
 namespace RAScriptLanguageServer
@@ -26,24 +24,37 @@ namespace RAScriptLanguageServer
         public override Task<LocationOrLocationLinks?> Handle(DefinitionParams request, CancellationToken cancellationToken)
         {
             var documentPath = request.TextDocument.Uri.ToString();
-            var line = request.Position.Line;
-            var character = request.Position.Character;
             var buffer = _bufferManager.GetBuffer(documentPath);
             var txt = buffer?.GetDocumentText();
-            if (txt != null && txt.Length > 0)
+            if (buffer != null && txt != null && txt.Length > 0)
             {
-                var word = buffer?.GetParser().GetWordAtPosition(txt, line, character);
-                if (word != null && word.Length != 0)
+                var word = buffer.GetParser().GetWordAtPosition(request.Position);
+                if (word != null && word.Word.Length != 0)
                 {
-                    Position? pos = buffer?.GetParser().GetLinkLocation(word);
-                    if (pos != null)
+                    int startOffset = buffer.GetParser().GetOffsetAt(word.Start);
+                    int endOffset = buffer.GetParser().GetOffsetAt(word.End);
+                    string hoverClass = buffer.GetParser().DetectClass(startOffset);
+                    if (txt[endOffset+1] != '(')
                     {
-                        var location = new LocationOrLocationLinks(new LocationOrLocationLink(new Location
+                        return Task.FromResult<LocationOrLocationLinks?>(null); // not a function (maybe string, or just varaible named the same)
+                    }
+                    int origWordOffset = buffer.GetParser().GetOffsetAt(request.Position);
+                    List<ClassFunction>? list = buffer.GetParser().GetClassFunctionDefinitions(word.Word);
+                    if (list != null)
+                    {
+                        WordScope scope = buffer.GetParser().GetScope(word.Start);
+                        List<ClassFunction> filteredList = list.Where(buffer.GetParser().ClassFilter(scope.Global, scope.UsingThis, hoverClass)).ToList();
+                        // can only link to one location, so anything that has multiple definitions wont work for code jumping
+                        if (filteredList.Count == 1)
                         {
-                            Uri = request.TextDocument.Uri,
-                            Range = new Range(pos, pos)
-                        }));
-                        return Task.FromResult<LocationOrLocationLinks?>(location);
+                            ClassFunction el = filteredList[0];
+                            LocationOrLocationLinks location = new LocationOrLocationLinks(new LocationOrLocationLink(new Location
+                            {
+                                Uri = request.TextDocument.Uri,
+                                Range = new Range(el.Pos, el.Pos)
+                            }));
+                            return Task.FromResult<LocationOrLocationLinks?>(location);
+                        }
                     }
                 }
             }
