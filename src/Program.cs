@@ -6,6 +6,7 @@ namespace RAScriptLanguageServer
 {
     public class Program
     {
+        #pragma warning disable VSTHRD200 // Use "Async" suffix in names of methods that return an awaitable type
         public static async Task Main(string[] args)
         {
             var server = await LanguageServer.From(options =>
@@ -28,5 +29,6 @@ namespace RAScriptLanguageServer
 
             await server.WaitForExit;
         }
+        #pragma warning restore VSTHRD200
     }
 }

@@ -110,7 +110,7 @@ namespace RAScriptLanguageServer
                 // Add completion data
                 completionClasses.Add(className);
             }
-            if (this._text != null && this._text != "")
+            if (this._text != "")
             {
                 // Parse each function in the document
                 foreach (Match ItemMatch in Regex.Matches(text, @"(\bfunction\b)[\t ]*([a-zA-Z][\w]*)[\t ]*\(([^\(\)]*)\)")) // keep in sync with syntax file rascript.tmLanguage.json #function-definitions regex
