@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Lint errors on main and parser functions
+- `achievement()` built-in function definition to support new `set` parameter
 
 ### Removed
 

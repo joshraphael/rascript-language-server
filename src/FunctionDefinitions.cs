@@ -799,7 +799,7 @@ namespace RAScriptLanguageServer
                 },
                 new FunctionDefinition() {
                     Key = "achievement",
-                    URL = "https://github.com/Jamiras/RATools/wiki/Achievement-Functions",
+                    URL = "https://github.com/Jamiras/RATools/wiki/Achievement-Functions#achievementtitle-description-points-trigger-id0-published-modified-badge0-type-set0",
                     Args = [
                         "title",
                         "description",
@@ -809,7 +809,8 @@ namespace RAScriptLanguageServer
                         "published",
                         "modified",
                         "badge",
-                        "type"
+                        "type",
+                        "set"
                     ],
                     CommentDoc = [
                         "// Defines a new achievement with the specified `title` (string), `description` (string), `points` (integer), and `trigger`.",
@@ -834,6 +835,8 @@ namespace RAScriptLanguageServer
                         "// | `\"missable\"` | Missable |",
                         "// | `\"progression\"` | Progression |",
                         "// | `\"win_condition\"` | Win condition |",
+                        "// ",
+                        "// `set` specifies the unique identifier of the [achievement set](https://github.com/Jamiras/RATools/wiki/Achievement-Functions#achievement_settitle-typebonus-id0-game_id0) the achievement should be partitioned into.",
                         "// ",
                         "// #### Example",
                         "// ",
