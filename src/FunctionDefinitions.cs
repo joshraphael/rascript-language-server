@@ -860,6 +860,35 @@ namespace RAScriptLanguageServer
                     ]
                 },
                 new FunctionDefinition() {
+                    Key = "achievement_set",
+                    URL = "https://github.com/Jamiras/RATools/wiki/Achievement-Functions#achievement_settitle-typebonus-id0-game_id0",
+                    Args = [
+                        "title",
+                        "type",
+                        "id",
+                        "game_id"
+                    ],
+                    CommentDoc = [
+                        "// Defines a new achievement set (subset) with the specified `title`.",
+                        "// ",
+                        "// `type` defines how the subset is associated to the base set. Valid values are `BONUS`, `SPECIALTY`, and `EXCLUSIVE`.",
+                        "// ",
+                        "// `id` is the achievement set id. This should match the `set=` parameter from the game's subset page.",
+                        "// ",
+                        "// `game_id` is the legacy game ID for subsets created before sets were merged into the base game.",
+                        "// ",
+                        "// The return value is the unique identifier of the set to be passed to the achievement/leaderboard functions. If `id` is provided, it will be returned, otherwise a local value will be generated.",
+                        "// ",
+                        "// #### Example",
+                        "// ",
+                        "// ```rascript",
+                        "// bonus_set = achievement_set(\"Bonus\")",
+                        "// achievement(\"Impossible\", \"Complete the game without dying\", 100, set=bonus_set,",
+                        "//     trigger = complete_game() && never(lives() < prev(lives))",
+                        "// ```"
+                    ]
+                },
+                new FunctionDefinition() {
                     Key = "rich_presence_display",
                     URL = "https://github.com/Jamiras/RATools/wiki/Rich-Presence-Functions#rich_presence_displayformat_string-parameters",
                     Args = [
