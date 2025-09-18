@@ -799,7 +799,7 @@ namespace RAScriptLanguageServer
                 },
                 new FunctionDefinition() {
                     Key = "achievement",
-                    URL = "https://github.com/Jamiras/RATools/wiki/Achievement-Functions",
+                    URL = "https://github.com/Jamiras/RATools/wiki/Achievement-Functions#achievementtitle-description-points-trigger-id0-published-modified-badge0-type-set0",
                     Args = [
                         "title",
                         "description",
@@ -809,7 +809,8 @@ namespace RAScriptLanguageServer
                         "published",
                         "modified",
                         "badge",
-                        "type"
+                        "type",
+                        "set"
                     ],
                     CommentDoc = [
                         "// Defines a new achievement with the specified `title` (string), `description` (string), `points` (integer), and `trigger`.",
@@ -835,6 +836,8 @@ namespace RAScriptLanguageServer
                         "// | `\"progression\"` | Progression |",
                         "// | `\"win_condition\"` | Win condition |",
                         "// ",
+                        "// `set` specifies the unique identifier of the [achievement set](https://github.com/Jamiras/RATools/wiki/Achievement-Functions#achievement_settitle-typebonus-id0-game_id0) the achievement should be partitioned into.",
+                        "// ",
                         "// #### Example",
                         "// ",
                         "// ```rascript",
@@ -853,6 +856,35 @@ namespace RAScriptLanguageServer
                         "// ",
                         "// ```rascript",
                         "// trigger = byte(0x0088) == 0x8B && byte(0x008C) == 0 && byte(0x0573) >= 0xF6",
+                        "// ```"
+                    ]
+                },
+                new FunctionDefinition() {
+                    Key = "achievement_set",
+                    URL = "https://github.com/Jamiras/RATools/wiki/Achievement-Functions#achievement_settitle-typebonus-id0-game_id0",
+                    Args = [
+                        "title",
+                        "type",
+                        "id",
+                        "game_id"
+                    ],
+                    CommentDoc = [
+                        "// Defines a new achievement set (subset) with the specified `title`.",
+                        "// ",
+                        "// `type` defines how the subset is associated to the base set. Valid values are `BONUS`, `SPECIALTY`, and `EXCLUSIVE`.",
+                        "// ",
+                        "// `id` is the achievement set id. This should match the `set=` parameter from the game's subset page.",
+                        "// ",
+                        "// `game_id` is the legacy game ID for subsets created before sets were merged into the base game.",
+                        "// ",
+                        "// The return value is the unique identifier of the set to be passed to the achievement/leaderboard functions. If `id` is provided, it will be returned, otherwise a local value will be generated.",
+                        "// ",
+                        "// #### Example",
+                        "// ",
+                        "// ```rascript",
+                        "// bonus_set = achievement_set(\"Bonus\")",
+                        "// achievement(\"Impossible\", \"Complete the game without dying\", 100, set=bonus_set,",
+                        "//     trigger = complete_game() && never(lives() < prev(lives))",
                         "// ```"
                     ]
                 },
@@ -1037,7 +1069,8 @@ namespace RAScriptLanguageServer
                         "value",
                         "format",
                         "lower_is_better",
-                        "id"
+                        "id",
+                        "set"
                     ],
                     CommentDoc = [
                         "// Defines a leaderboard. `title` and `description` must be strings.",
@@ -1062,7 +1095,9 @@ namespace RAScriptLanguageServer
                         "// ",
                         "// if `lower_is_better` is `true`, lower scores will be ranked higher in the leaderboard.",
                         "// ",
-                        "// if `id` is provided when calling the `leaderboard` function, the script will generate a local leaderboard definition that the toolkit will merge into the existing leaderboard instead of putting as a separate local leaderboard."
+                        "// if `id` is provided when calling the `leaderboard` function, the script will generate a local leaderboard definition that the toolkit will merge into the existing leaderboard instead of putting as a separate local leaderboard.",
+                        "// ",
+                        "// `set` specifies the unique identifier of the [achievement set](https://github.com/Jamiras/RATools/wiki/Achievement-Functions#achievement_settitle-typebonus-id0-game_id0) the achievement should be partitioned into.",
                     ]
                 },
                 new FunctionDefinition() {
