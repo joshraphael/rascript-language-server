@@ -2,10 +2,11 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
+using Microsoft.Extensions.Logging;
 
 namespace RAScriptLanguageServer
 {
-    class HoverProvider(ILanguageServerFacade router, BufferManager bufferManager) : HoverHandlerBase
+    class HoverProvider(ILanguageServerFacade router, ILogger<HoverProvider> logger, BufferManager bufferManager) : HoverHandlerBase
     {
 
         private readonly TextDocumentSelector _textDocumentSelector = new TextDocumentSelector(
@@ -17,9 +18,11 @@ namespace RAScriptLanguageServer
 
         private readonly ILanguageServerFacade _router = router;
         private readonly BufferManager _bufferManager = bufferManager;
+        private readonly ILogger _logger = logger;
 
         public override Task<Hover?> Handle(HoverParams request, CancellationToken cancellationToken)
         {
+            // _logger.LogInformation("Parser Handler");
             var documentPath = request.TextDocument.Uri.ToString();
             var t = request.Position;
             var buffer = _bufferManager.GetBuffer(documentPath);
@@ -156,7 +159,6 @@ namespace RAScriptLanguageServer
                             {
                                 lines = lines.Concat(defintion.Lines).ToArray();
                             }
-                            HoverData definition = filteredDefinitions[0];
                             var content = new List<MarkedString>();
                             foreach (var l in lines)
                             {
