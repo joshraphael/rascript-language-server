@@ -13,3 +13,6 @@
 lib
 /Tests/Regressions
 **/launchSettings.json
+*.rascript
+log*.txt
+*.log

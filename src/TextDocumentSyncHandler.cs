@@ -6,6 +6,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
+using Microsoft.Extensions.Logging;
 using MediatR;
 using RASharp;
 
@@ -20,13 +21,15 @@ namespace RAScriptLanguageServer
             }
         );
         private readonly ILanguageServerFacade _router;
+        private readonly ILogger _logger;
         private readonly BufferManager _bufferManager;
         private readonly FunctionDefinitions _functionDefinitions;
         private readonly RetroAchievements _retroachievements;
 
-        public TextDocumentSyncHandler(ILanguageServerFacade router, BufferManager bufferManager)
+        public TextDocumentSyncHandler(ILanguageServerFacade router, ILogger<TextDocumentSyncHandler> logger, BufferManager bufferManager)
         {
             _router = router;
+            _logger = logger;
             _bufferManager = bufferManager;
             _functionDefinitions = new FunctionDefinitions();
             _retroachievements = new RetroAchievements(RetroAchievements.RetroAchievementsHost, "");
@@ -42,7 +45,7 @@ namespace RAScriptLanguageServer
         {
             var documentPath = request.TextDocument.Uri.ToString();
             var text = request.TextDocument.Text;
-            Parser p = new Parser(_router, _functionDefinitions, text);
+            Parser p = new Parser(_router, _logger, _functionDefinitions, text);
             _ = _bufferManager.UpdateBufferAsync(documentPath, new StringBuilder(request.TextDocument.Text), p);
             return Unit.Task;
         }
@@ -53,7 +56,7 @@ namespace RAScriptLanguageServer
             var text = request.ContentChanges.FirstOrDefault()?.Text;
             if (text != null)
             {
-                Parser p = new Parser(_router, _functionDefinitions, text);
+                Parser p = new Parser(_router, _logger, _functionDefinitions, text);
                 _ = _bufferManager.UpdateBufferAsync(documentPath, new StringBuilder(text), p);
             }
             return Unit.Task;

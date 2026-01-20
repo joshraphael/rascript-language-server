@@ -1,21 +1,37 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OmniSharp.Extensions.LanguageServer.Server;
+using Serilog;
 
 namespace RAScriptLanguageServer
 {
     public class Program
     {
-        #pragma warning disable VSTHRD200 // Use "Async" suffix in names of methods that return an awaitable type
-        public static async Task Main(string[] args)
+        private static void Main(string[] args)
         {
+            MainAsync(args).Wait();
+        }
+        // #pragma warning disable VSTHRD200 // Use "Async" suffix in names of methods that return an awaitable type
+        private static async Task MainAsync(string[] args)
+        {
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.FromLogContext()
+                // .WriteTo.File("log.txt", rollingInterval: RollingInterval.Day) // just use this for debug builds
+                .MinimumLevel.Verbose()
+                .CreateLogger();
+
+            Log.Logger.Information("This only goes file...");
             var server = await LanguageServer.From(options =>
                 options
                     .WithInput(Console.OpenStandardInput())
                     .WithOutput(Console.OpenStandardOutput())
-                    .WithLoggerFactory(new LoggerFactory())
-                    .AddDefaultLoggingProvider()
-                    .WithServices(x => x.AddLogging(b => b.SetMinimumLevel(LogLevel.Trace)))
+                    .ConfigureLogging(
+                        x => x
+                            .AddSerilog(Log.Logger)
+                            .AddLanguageProtocolLogging()
+                            .SetMinimumLevel(LogLevel.Debug)
+                    )
+                    .WithServices(x => x.AddLogging(b => b.SetMinimumLevel(LogLevel.Debug)))
                     .WithServices(services =>
                     {
                         services
@@ -25,10 +41,10 @@ namespace RAScriptLanguageServer
                     .WithHandler<HoverProvider>()
                     .WithHandler<DefinitionProvider>()
                     .WithHandler<CompletionProvider>()
-                );
+                ).ConfigureAwait(false);
 
-            await server.WaitForExit;
+            await server.WaitForExit.ConfigureAwait(false);
         }
-        #pragma warning restore VSTHRD200
+        // #pragma warning restore VSTHRD200
     }
 }

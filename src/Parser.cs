@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using RASharp.Models;
 
 namespace RAScriptLanguageServer
@@ -10,6 +11,7 @@ namespace RAScriptLanguageServer
     {
         public readonly ILanguageServerFacade _router;
         private readonly string _text;
+        private readonly ILogger _logger;
         private readonly TextPositions textPositions;
         private readonly CommentBounds[] commentBounds;
         private readonly Dictionary<string, ClassScope> classes;
@@ -21,9 +23,10 @@ namespace RAScriptLanguageServer
         private int gameID;
         private GetCodeNotes? codeNotes;
 
-        public Parser(ILanguageServerFacade router, FunctionDefinitions builtinFunctionDefinitions, string text)
+        public Parser(ILanguageServerFacade router, ILogger logger, FunctionDefinitions builtinFunctionDefinitions, string text)
         {
             _router = router;
+            _logger = logger;
             this._text = text;
             this.textPositions = new TextPositions(_router, text);
             this.commentBounds = this.GetCommentBoundsList();
@@ -101,9 +104,9 @@ namespace RAScriptLanguageServer
                     else
                     {
                         this.words[className] = new List<HoverData>
-                    {
-                        hover
-                    };
+                        {
+                            hover
+                        };
                     }
                 }
 
@@ -124,7 +127,7 @@ namespace RAScriptLanguageServer
                     Position pos = this.textPositions.GetPosition(ItemMatch.Index);
                     string comment = this.GetCommentText(pos);
                     string funcName = ItemMatch.Groups.Values.ElementAt(2).ToString();
-                    string[] args = ItemMatch.Groups.Values.ElementAt(3).ToString().Split(",").Select(s => s.Trim()).ToArray();
+                    string[] args = ItemMatch.Groups.Values.ElementAt(3).ToString().Split(",", StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToArray();
 
                     // add definition info
                     ClassFunction definition = new ClassFunction
@@ -159,14 +162,14 @@ namespace RAScriptLanguageServer
                         else
                         {
                             this.words[funcName] = new List<HoverData>
-                        {
-                            hover
-                        };
+                            {
+                                hover
+                            };
                         }
                     }
 
                     // add completion info
-                        completionFunctions.Add(funcName);
+                    completionFunctions.Add(funcName);
                 }
 
                 // Parse each variable in the document
@@ -556,7 +559,7 @@ namespace RAScriptLanguageServer
             return finalComment;
         }
 
-        private List<string> parseCommenText(string comment)
+        private List<string> parseCommentText(string comment)
         {
             List<string> lines = new List<string>();
             string[] commentLines = Regex.Split(comment, @"\r?\n");
@@ -625,7 +628,7 @@ namespace RAScriptLanguageServer
                     prefix = $"// class {className}\nfunction ";
                 }
                 lines.Add($"```rascript\n{prefix}{key}({argStr})\n```");
-                List<string> comments = parseCommenText(text);
+                List<string> comments = parseCommentText(text);
                 lines.AddRange(comments);
                 if (linkKey != null && linkKey != "")
                 {
@@ -652,7 +655,7 @@ namespace RAScriptLanguageServer
                     prefix = $"// class {className}\nfunction ";
                 }
                 lines.Add($"```rascript\n{prefix}{key}({argStr})\n```");
-                List<string> comments = parseCommenText(text);
+                List<string> comments = parseCommentText(text);
                 lines.AddRange(comments);
                 return new HoverData
                 {
