@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-RATOOLS_VERSION := v1.15.1
+RATOOLS_VERSION := v1.17.3
 
 reset:
 	rm -rf src/bin/
