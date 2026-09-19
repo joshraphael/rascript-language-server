@@ -5,19 +5,19 @@ All notable changes to the "rascript-language-server" extension will be document
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [[X.Y.Z](https://github.com/joshraphael/rascript-language-server/releases/tag/vX.Y.Z)] - 2026-MM-DD
+## [[0.5.0](https://github.com/joshraphael/rascript-language-server/releases/tag/v0.5.0)] - 2026-09-18
 
-[diff](https://github.com/joshraphael/rascript-language-server/compare/v0.4.1...vX.Y.Z)
+[diff](https://github.com/joshraphael/rascript-language-server/compare/v0.4.1...v0.5.0)
 
 ### Added
 
-- remembered() function
-- field_map() function
+- New built-in function definition `remembered()`
+- New built-in function definition `field_map()`
 
 ### Changed
 
 - Build on Dotnet 10.0
-- Bump RATools to 1.17.3
+- Bump RATools to v1.17.3
 
 ### Removed
 
