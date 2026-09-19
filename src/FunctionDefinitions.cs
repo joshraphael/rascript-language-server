@@ -357,6 +357,31 @@ namespace RAScriptLanguageServer
                     ]
                 },
                 new FunctionDefinition() {
+                    Key = "remembered",
+                    URL = "https://github.com/Jamiras/RATools/wiki/Accessing-Memory#remember",
+                    Args = [
+                        "accessor"
+                    ],
+                    CommentDoc = [
+                        "// RATools will automatically construct `Remember` chains when necessary for complex math, but you can manually request it to use `Remember` by wrapping a memory accessor in `remembered()`.",
+                        "// The `remembered()` function will capture the parameter with a `Remember` condition and generate a `{recall}` accessor when building the trigger.",
+                        "// For additional calls to `remembered()`, an additional `Remember` clause will not be generated if the captured parameter matches the last output `Remember`.",
+                        "// ",
+                        "// ### Example",
+                        "// ",
+                        "// ```rascript",
+                        "// start_of_struct = remembered(really_long_pointer_chain())",
+                        "// achievement(\"Example\", \"Example\", 5,",
+                        "//     trigger = dword(start_of_struct + 8) == 6 &&",
+                        "//               dword(start_of_struct) == 16 &&",
+                        "//               dword(start_of_struct + 20) > prev(dword(start_of_struct + 20))",
+                        "// )",
+                        "// ```",
+                        "// ",
+                        "// Would generate code that would remember the really long pointer chain, then use `{recall}` to reference the pointer in three conditions.",
+                    ]
+                },
+                new FunctionDefinition() {
                     Key = "repeated",
                     URL = "https://github.com/Jamiras/RATools/wiki/Trigger-Functions#repeatedcount-comparison",
                     Args = [
