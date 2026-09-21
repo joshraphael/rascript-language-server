@@ -31,6 +31,7 @@ C:\Users\joshraphael\rascript-language-server_v0.0.1_win-x64.exe
 - Function navigation - Jump to a functions defintion.
 - Code Completion - Completion results appear for symbols as you type.
 - Hover Info - Documentation appears when you hover over a function or class.
+- Error Diagnostics - Compiler errors reported on specific text that violate the language definition.
 
 ## Projects Using rascript-language-server
 - [vscode-rascript](https://github.com/joshraphael/vscode-rascript) - VSCode language client for RAScript.
