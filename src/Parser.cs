@@ -4,6 +4,8 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using RASharp.Models;
+using RATools.Parser;
+using Jamiras.Components;
 
 namespace RAScriptLanguageServer
 {
@@ -11,7 +13,7 @@ namespace RAScriptLanguageServer
     {
         public readonly ILanguageServerFacade _router;
         private readonly string _text;
-        private readonly ILogger _logger;
+        private readonly Microsoft.Extensions.Logging.ILogger _logger;
         private readonly TextPositions textPositions;
         private readonly CommentBounds[] commentBounds;
         private readonly Dictionary<string, ClassScope> classes;
@@ -20,10 +22,11 @@ namespace RAScriptLanguageServer
         public readonly List<string> completionFunctions;
         public readonly List<string> completionVariables;
         public readonly List<string> completionClasses;
+        public readonly List<DiagnosticData> errors;
         private int gameID;
         private GetCodeNotes? codeNotes;
 
-        public Parser(ILanguageServerFacade router, ILogger logger, FunctionDefinitions builtinFunctionDefinitions, string text)
+        public Parser(ILanguageServerFacade router, Microsoft.Extensions.Logging.ILogger logger, FunctionDefinitions builtinFunctionDefinitions, string text)
         {
             _router = router;
             _logger = logger;
@@ -36,7 +39,39 @@ namespace RAScriptLanguageServer
             this.completionFunctions = new List<string>();
             this.completionVariables = new List<string>();
             this.completionClasses = new List<string>();
+            this.errors = new List<DiagnosticData>();
             this.gameID = 0; // game id's start at 1 on RA
+
+            var interpreter = new AchievementScriptInterpreter();
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(this._text));
+            var groups = interpreter.Parse(tokenizer);
+            AchievementScriptInterpreter.InitializeScope(groups, null);
+            interpreter.Run(groups, null);
+
+            if (groups.HasEvaluationErrors)
+            {
+                foreach (var error in groups.Errors) {
+                    if (error != null) {
+                        var msg = error.Message;
+                        if (error.InnerError != null) {
+                            msg += "\n";
+                            msg += error.InnerError;
+                        }
+                        if (error.InnermostError != null) {
+                            msg += "\n";
+                            msg += error.InnermostError;
+                        }
+                        this.errors.Add(new DiagnosticData
+                        {
+                            Start = new Position(error.Location.Start.Line - 1, error.Location.Start.Column - 1),
+                            End = new Position(error.Location.End.Line - 1, error.Location.End.Column - 1),
+                            Message = msg,
+                            Source = "RATools",
+                            Code = error.Type.ToString()
+                        });
+                    }
+                }
+            }
 
             // find the game id in the document
             foreach (Match ItemMatch in Regex.Matches(text, @"\/\/\s*#ID\s*=\s*(\d+)"))
