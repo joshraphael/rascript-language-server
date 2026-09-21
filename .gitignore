@@ -16,3 +16,4 @@ lib
 *.rascript
 log*.txt
 *.log
+.vscode

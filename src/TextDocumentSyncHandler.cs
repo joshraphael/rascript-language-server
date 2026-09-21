@@ -46,6 +46,7 @@ namespace RAScriptLanguageServer
             var documentPath = request.TextDocument.Uri.ToString();
             var text = request.TextDocument.Text;
             Parser p = new Parser(_router, _logger, _functionDefinitions, text);
+            this.HandleDiagnostics(request.TextDocument.Uri, p);
             _ = _bufferManager.UpdateBufferAsync(documentPath, new StringBuilder(request.TextDocument.Text), p);
             return Unit.Task;
         }
@@ -57,6 +58,7 @@ namespace RAScriptLanguageServer
             if (text != null)
             {
                 Parser p = new Parser(_router, _logger, _functionDefinitions, text);
+                this.HandleDiagnostics(request.TextDocument.Uri, p);
                 _ = _bufferManager.UpdateBufferAsync(documentPath, new StringBuilder(text), p);
             }
             return Unit.Task;
@@ -77,5 +79,27 @@ namespace RAScriptLanguageServer
             Change = TextDocumentSyncKind.Full,
             Save = new SaveOptions() { IncludeText = true }
         };
+
+        private void HandleDiagnostics(DocumentUri uri, Parser p)
+        {
+            var diagnosticsList = new List<Diagnostic>();
+            foreach (DiagnosticData error in p.errors) {
+                var diag = new Diagnostic
+                {
+                    Range = new OmniSharp.Extensions.LanguageServer.Protocol.Models.Range(error.Start, error.End),
+                    Severity = DiagnosticSeverity.Error,
+                    Code = error.Code,
+                    Source = error.Source,
+                    Message = error.Message
+                };
+                diagnosticsList.Add(diag);
+            }
+            PublishDiagnosticsParams diags = new()
+            {
+                Uri = uri,
+                Diagnostics = new Container<Diagnostic>(diagnosticsList)
+            };
+            _router.TextDocument.PublishDiagnostics(diags);
+        }
     }
 }

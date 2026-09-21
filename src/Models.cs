@@ -61,4 +61,13 @@ namespace RAScriptLanguageServer
         public required bool Class { get; set; }
         public required bool CodeNote { get; set; }
     }
+
+    public class DiagnosticData
+    {
+        public required Position Start { get; set; }
+        public required Position End { get; set; }
+        public required string Message { get; set; }
+        public required string Source { get; set; }
+        public required string Code { get; set; }
+    }
 }

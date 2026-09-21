@@ -26,6 +26,8 @@ modify:
 run: reset modify
 	dotnet run --project src/rascript-language-server.csproj
 
+dev-build: reset modify build-linux-x64
+
 build: reset modify build-linux-x64 build-win-x64 build-osx-x64 build-osx-arm64
 
 build-linux-x64:
