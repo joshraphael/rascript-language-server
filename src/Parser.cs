@@ -262,7 +262,7 @@ namespace RAScriptLanguageServer
             if(address == "") { // people use the 0x000 address as an informational note sometimes
                 address = "0";
             }
-            return address;
+            return address.ToLower();
         }
 
         public GetCodeNotes? GetCodeNotes()
