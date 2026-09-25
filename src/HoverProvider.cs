@@ -61,16 +61,20 @@ namespace RAScriptLanguageServer
                             }
                         }
                     }
+                    WordType wordType = buffer.GetParser().GetWordType(word);
+                    if (!wordType.Function && !wordType.Class && !wordType.CodeNote)
+                    {
+                        // only provide hover data for code notes, classes and functions
+                        return Task.FromResult<Hover?>(null);
+                    }
                     WordScope scope = buffer.GetParser().GetScope(word.Start);
-                    List<HoverData>? definitions = buffer.GetParser().GetHoverData(word.Word);
+                    string key = word.Word;
+                    if (wordType.CodeNote) {
+                        key = Parser.StripCodeNoteAddress(word.Word);
+                    }
+                    List<HoverData>? definitions = buffer.GetParser().GetHoverData(key);
                     if (definitions != null)
                     {
-                        WordType wordType = buffer.GetParser().GetWordType(word);
-                        if (!wordType.Function && !wordType.Class && !wordType.CodeNote)
-                        {
-                            // only provide hover data for code notes, classes and functions
-                            return Task.FromResult<Hover?>(null);
-                        }
                         // if we are hovering over the actual function signature itself, find it and return it
                         foreach (HoverData definition in definitions)
                         {

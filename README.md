@@ -30,7 +30,7 @@ C:\Users\joshraphael\rascript-language-server_v0.0.1_win-x64.exe
 - Syntax Highlighting - Custom RAScript syntax highlighting using TextMate.
 - Function navigation - Jump to a functions defintion.
 - Code Completion - Completion results appear for symbols as you type.
-- Hover Info - Documentation appears when you hover over a function or class.
+- Hover Info - Documentation appears when you hover over a function, class, or code note.
 - Error Diagnostics - Compiler errors reported on specific text that violate the language definition.
 
 ## Projects Using rascript-language-server
