@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Code notes showing no hover info with padded zeros
+- Hover text stop showing in comments
 
 ## [[0.5.1](https://github.com/joshraphael/rascript-language-server/releases/tag/v0.5.1)] - 2026-09-21
 

@@ -61,6 +61,11 @@ namespace RAScriptLanguageServer
                             }
                         }
                     }
+                    if (buffer.GetParser().InCommentBounds(buffer.GetParser().GetOffsetAt(request.Position)))
+                    {
+                        // dont provide hover data for comments
+                        return Task.FromResult<Hover?>(null);
+                    }
                     WordType wordType = buffer.GetParser().GetWordType(word);
                     if (!wordType.Function && !wordType.Class && !wordType.CodeNote)
                     {
