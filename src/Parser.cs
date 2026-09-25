@@ -231,17 +231,18 @@ namespace RAScriptLanguageServer
             {
                 foreach (var note in this.codeNotes.CodeNotes)
                 {
+                    string strippedAddress = StripCodeNoteAddress(note.Address);
                     HoverData? hover = NewHoverText(note.Address, -1, "codeNote", "", note.Note, note.User, []);
                     if (hover != null)
                     {
-                        List<HoverData>? data = this.GetHoverData(note.Address);
+                        List<HoverData>? data = this.GetHoverData(strippedAddress);
                         if (data != null)
                         {
                             data.Add(hover);
                         }
                         else
                         {
-                            this.words[note.Address] = new List<HoverData>
+                            this.words[strippedAddress] = new List<HoverData>
                             {
                                 hover
                             };
@@ -249,6 +250,19 @@ namespace RAScriptLanguageServer
                     }
                 }
             }
+        }
+
+        public static string StripCodeNoteAddress(string address) {
+            string prefix = "0x";
+            // most likely always true
+            if(address.StartsWith(prefix)) {
+                address = address[prefix.Length..];
+            }
+            address = address.TrimStart('0');
+            if(address == "") { // people use the 0x000 address as an informational note sometimes
+                address = "0";
+            }
+            return address;
         }
 
         public GetCodeNotes? GetCodeNotes()

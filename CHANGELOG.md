@@ -5,6 +5,20 @@ All notable changes to the "rascript-language-server" extension will be document
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [[0.5.2](https://github.com/joshraphael/rascript-language-server/releases/tag/v0.5.2)] - 2026-MM-DD
+
+[diff](https://github.com/joshraphael/rascript-language-server/compare/v0.5.1...v0.5.2)
+
+### Added
+
+### Changed
+
+### Removed
+
+### Fixed
+
+- Code notes showing no hover info with padded zeros
+
 ## [[0.5.1](https://github.com/joshraphael/rascript-language-server/releases/tag/v0.5.1)] - 2026-09-21
 
 [diff](https://github.com/joshraphael/rascript-language-server/compare/v0.5.0...v0.5.1)
