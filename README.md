@@ -26,6 +26,11 @@ Windows:
 C:\Users\joshraphael\rascript-language-server_v0.0.1_win-x64.exe
 ```
 
+Browser:
+```text
+/home/joshraphael/rascript-language-server_v0.0.1_wasi-wasm.wasm
+```
+
 ## Feature Highlights
 - Syntax Highlighting - Custom RAScript syntax highlighting using TextMate.
 - Function navigation - Jump to a functions defintion.

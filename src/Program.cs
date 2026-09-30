@@ -7,12 +7,12 @@ namespace RAScriptLanguageServer
 {
     public class Program
     {
-        private static void Main(string[] args)
-        {
-            MainAsync(args).Wait();
-        }
+        // private static void Main(string[] args)
+        // {
+        //     MainAsync(args).Wait();
+        // }
         // #pragma warning disable VSTHRD200 // Use "Async" suffix in names of methods that return an awaitable type
-        private static async Task MainAsync(string[] args)
+        static async Task Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
                 .Enrich.FromLogContext()
