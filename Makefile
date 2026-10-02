@@ -28,13 +28,16 @@ run: reset modify
 
 dev-build: reset modify build-linux-x64
 
-build: reset modify build-linux-x64 build-win-x64 build-osx-x64 build-osx-arm64
+build: reset modify build-linux-x64 build-win-x64 build-win-x86 build-osx-x64 build-osx-arm64
 
 build-linux-x64:
 	./scripts/build.sh linux-x64
 
 build-win-x64:
 	./scripts/build.sh win-x64
+
+build-win-x86:
+	./scripts/build.sh win-x86
 
 build-osx-x64:
 	./scripts/build.sh osx-x64
