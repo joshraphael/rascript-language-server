@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [[ $1 != @(linux-x64|win-x64|win-x86|win-arm64|osx-x64|osx-arm64) ]]; then
+if [[ $1 != @(linux-x64|linux-arm64|win-x64|win-x86|win-arm64|osx-x64|osx-arm64) ]]; then
     echo "Invalid architecture: $1"
     exit 1
 fi
